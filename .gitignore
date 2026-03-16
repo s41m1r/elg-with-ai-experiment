@@ -3,3 +3,4 @@
 .tmp/
 *~
 sample_data/
+api_log.csv
