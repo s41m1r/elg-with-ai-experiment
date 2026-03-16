@@ -8,7 +8,7 @@ records executability (M1) and schema correctness (M2), and saves results.
 Supports:
   - Single file execution
   - Batch mode (all outputs from run_llms.py)
-  - Ground truth execution (Zeinab's queries)
+  - Ground truth execution (author's queries)
   - Both DuckDB (demo/prototyping) and PostgreSQL (full MIMIC-IV OMOP CDM)
 
 ⚠️  DUA COMPLIANCE: All SQL execution happens LOCALLY. No patient data
@@ -28,7 +28,7 @@ Usage:
     python execute_sql.py --batch --db duckdb --duckdb-csv-dir ../path/to/omop_csvs
 
     # Batch mode: execute ground truth files
-    python execute_sql.py --batch-gt --gt-dir ../zeinab_packet \\
+    python execute_sql.py --batch-gt --gt-dir ../author_packet \\
                           --db postgres --pg-conn "host=localhost dbname=mimic_omop"
 
     # Dry run
