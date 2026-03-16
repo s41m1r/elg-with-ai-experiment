@@ -1,0 +1,101 @@
+You are a database expert specialising in healthcare data and process mining.
+Generate a PostgreSQL SQL query that extracts an event log for the following
+clinical process from a healthcare database structured according to the
+OMOP Common Data Model (CDM). The underlying data originates from MIMIC-IV.
+
+Process: Medication Administration: Track the lifecycle of medications for a hospital admission. The case_id should be the visit_occurrence_id. Activities include: Drug Exposure Started, Drug Exposure Ended, Drug Era Started, Drug Era Ended. Use drug_exposure for individual administration events (drug_exposure_start_datetime, drug_exposure_end_datetime) and drug_era for aggregated drug periods (drug_era_start_date, drug_era_end_date). Join concept table on drug_concept_id to include the medication name in the activity label. Filter out NULL timestamps.
+
+The relevant OMOP CDM database schema (CREATE TABLE statements) is provided
+below. Use ONLY these tables and columns — do not reference any other tables.
+
+-- ============================================================
+-- OMOP CDM Schema for Medication Administration
+-- Task: T2
+-- Source: MIMIC-IV mapped to OMOP Common Data Model v5.4
+-- Generated from demo CSV column headers + OMOP CDM spec
+-- ============================================================
+-- OMOP CDM: drug_exposure (individual medication administrations)
+CREATE TABLE drug_exposure (
+    drug_exposure_id             BIGINT        NOT NULL PRIMARY KEY,
+    person_id                    BIGINT        NOT NULL,
+    drug_concept_id              INTEGER       NOT NULL,
+    drug_exposure_start_date     DATE          NOT NULL,
+    drug_exposure_start_datetime TIMESTAMP,
+    drug_exposure_end_date       DATE          NOT NULL,
+    drug_exposure_end_datetime   TIMESTAMP,
+    verbatim_end_date            DATE,
+    drug_type_concept_id         INTEGER       NOT NULL,
+    stop_reason                  VARCHAR(20),
+    refills                      INTEGER,
+    quantity                     NUMERIC,
+    days_supply                  INTEGER,
+    sig                          TEXT,
+    route_concept_id             INTEGER,
+    lot_number                   VARCHAR(50),
+    provider_id                  BIGINT,
+    visit_occurrence_id          BIGINT,
+    visit_detail_id              BIGINT,
+    drug_source_value            VARCHAR(50),
+    drug_source_concept_id       INTEGER,
+    route_source_value           VARCHAR(50),
+    dose_unit_source_value       VARCHAR(50)
+);
+
+-- OMOP CDM: drug_era (aggregated continuous drug exposure periods)
+CREATE TABLE drug_era (
+    drug_era_id            BIGINT    NOT NULL PRIMARY KEY,
+    person_id              BIGINT    NOT NULL,
+    drug_concept_id        INTEGER   NOT NULL,
+    drug_era_start_date    DATE      NOT NULL,
+    drug_era_end_date      DATE      NOT NULL,
+    drug_exposure_count    INTEGER,
+    gap_days               INTEGER
+);
+
+-- OMOP CDM: visit_occurrence (hospital visits/admissions)
+CREATE TABLE visit_occurrence (
+    visit_occurrence_id           BIGINT        NOT NULL PRIMARY KEY,
+    person_id                     BIGINT        NOT NULL,
+    visit_concept_id              INTEGER       NOT NULL,
+    visit_start_date              DATE          NOT NULL,
+    visit_start_datetime          TIMESTAMP,
+    visit_end_date                DATE          NOT NULL,
+    visit_end_datetime            TIMESTAMP,
+    visit_type_concept_id         INTEGER       NOT NULL,
+    provider_id                   BIGINT,
+    care_site_id                  BIGINT,
+    visit_source_value            VARCHAR(50),
+    visit_source_concept_id       INTEGER,
+    admitting_source_concept_id   INTEGER,
+    admitting_source_value        VARCHAR(50),
+    discharge_to_concept_id       INTEGER,
+    discharge_to_source_value     VARCHAR(50),
+    preceding_visit_occurrence_id BIGINT
+);
+
+-- OMOP CDM: concept table (vocabulary lookup)
+CREATE TABLE concept (
+    concept_id          INTEGER       NOT NULL PRIMARY KEY,
+    concept_name        VARCHAR(255)  NOT NULL,
+    domain_id           VARCHAR(20)   NOT NULL,
+    vocabulary_id       VARCHAR(20)   NOT NULL,
+    concept_class_id    VARCHAR(20)   NOT NULL,
+    standard_concept    VARCHAR(1),
+    concept_code        VARCHAR(50)   NOT NULL,
+    valid_start_date    DATE          NOT NULL,
+    valid_end_date      DATE          NOT NULL,
+    invalid_reason      VARCHAR(1)
+);
+
+
+The output query MUST produce exactly three columns:
+  - case_id   : a unique identifier for each process instance (BIGINT)
+  - activity  : a human-readable name for the clinical event (VARCHAR)
+  - timestamp : when the event occurred (TIMESTAMP)
+
+Requirements:
+  - Use ONLY the tables defined in the schema above.
+  - Use UNION ALL to combine events from multiple source tables.
+  - Filter out any rows where timestamp IS NULL.
+  - Order results by case_id, timestamp.
+  - Return ONLY the SQL query — no explanation, no markdown fences.

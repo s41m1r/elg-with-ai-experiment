@@ -1,0 +1,230 @@
+You are a database expert specialising in healthcare data and process mining.
+Generate a PostgreSQL SQL query that extracts an event log for the following
+clinical process from a healthcare database structured according to the
+OMOP Common Data Model (CDM). The underlying data originates from MIMIC-IV.
+
+Below is a complete worked example for a DIFFERENT clinical process, showing
+the expected format and approach.
+
+────────────────────────────────────────────
+EXAMPLE (T5: Emergency Department Flow)
+────────────────────────────────────────────
+
+Example process: Emergency Department Flow: Track a patient's flow through the emergency department from arrival to disposition. The case_id should be the visit_occurrence_id (ED visit). Activities include: ED Arrival, ED Procedure, ED Diagnosis Recorded, ED Discharge. Filter visit_occurrence to ED visits using visit_concept_id = 9203 (Emergency Room Visit) or 262 (Emergency Room and Inpatient Visit). Use visit_detail (filter by visit_detail_concept_id = 8870 for Emergency Room) for sub-stay events, condition_occurrence for diagnoses (condition_start_datetime), and procedure_occurrence for procedures (procedure_datetime). All tables join via visit_occurrence_id. Filter out NULL timestamps.
+
+Example OMOP CDM schema:
+-- ============================================================
+-- OMOP CDM Schema for Emergency Department Flow
+-- Task: T5
+-- Source: MIMIC-IV mapped to OMOP Common Data Model v5.4
+-- Generated from demo CSV column headers + OMOP CDM spec
+-- ============================================================
+-- OMOP CDM: visit_occurrence (hospital visits/admissions)
+CREATE TABLE visit_occurrence (
+    visit_occurrence_id           BIGINT        NOT NULL PRIMARY KEY,
+    person_id                     BIGINT        NOT NULL,
+    visit_concept_id              INTEGER       NOT NULL,
+    visit_start_date              DATE          NOT NULL,
+    visit_start_datetime          TIMESTAMP,
+    visit_end_date                DATE          NOT NULL,
+    visit_end_datetime            TIMESTAMP,
+    visit_type_concept_id         INTEGER       NOT NULL,
+    provider_id                   BIGINT,
+    care_site_id                  BIGINT,
+    visit_source_value            VARCHAR(50),
+    visit_source_concept_id       INTEGER,
+    admitting_source_concept_id   INTEGER,
+    admitting_source_value        VARCHAR(50),
+    discharge_to_concept_id       INTEGER,
+    discharge_to_source_value     VARCHAR(50),
+    preceding_visit_occurrence_id BIGINT
+);
+
+-- OMOP CDM: visit_detail (sub-visits: ICU stays, ED stays, ward transfers)
+CREATE TABLE visit_detail (
+    visit_detail_id               BIGINT        NOT NULL PRIMARY KEY,
+    person_id                     BIGINT        NOT NULL,
+    visit_detail_concept_id       INTEGER       NOT NULL,
+    visit_detail_start_date       DATE          NOT NULL,
+    visit_detail_start_datetime   TIMESTAMP,
+    visit_detail_end_date         DATE          NOT NULL,
+    visit_detail_end_datetime     TIMESTAMP,
+    visit_detail_type_concept_id  INTEGER       NOT NULL,
+    provider_id                   BIGINT,
+    care_site_id                  BIGINT,
+    admitting_source_concept_id   INTEGER,
+    discharge_to_concept_id       INTEGER,
+    preceding_visit_detail_id     BIGINT,
+    visit_detail_source_value     VARCHAR(50),
+    visit_detail_source_concept_id INTEGER,
+    admitting_source_value        VARCHAR(50),
+    discharge_to_source_value     VARCHAR(50),
+    visit_detail_parent_id        BIGINT,
+    visit_occurrence_id           BIGINT        NOT NULL
+);
+
+-- OMOP CDM: condition_occurrence (diagnoses)
+CREATE TABLE condition_occurrence (
+    condition_occurrence_id       BIGINT        NOT NULL PRIMARY KEY,
+    person_id                     BIGINT        NOT NULL,
+    condition_concept_id          INTEGER       NOT NULL,
+    condition_start_date          DATE          NOT NULL,
+    condition_start_datetime      TIMESTAMP,
+    condition_end_date            DATE,
+    condition_end_datetime        TIMESTAMP,
+    condition_type_concept_id     INTEGER       NOT NULL,
+    stop_reason                   VARCHAR(20),
+    provider_id                   BIGINT,
+    visit_occurrence_id           BIGINT,
+    visit_detail_id               BIGINT,
+    condition_source_value        VARCHAR(50),
+    condition_source_concept_id   INTEGER,
+    condition_status_source_value VARCHAR(50),
+    condition_status_concept_id   INTEGER
+);
+
+-- OMOP CDM: procedure_occurrence (clinical procedures)
+CREATE TABLE procedure_occurrence (
+    procedure_occurrence_id     BIGINT        NOT NULL PRIMARY KEY,
+    person_id                   BIGINT        NOT NULL,
+    procedure_concept_id        INTEGER       NOT NULL,
+    procedure_date              DATE          NOT NULL,
+    procedure_datetime          TIMESTAMP,
+    procedure_type_concept_id   INTEGER       NOT NULL,
+    modifier_concept_id         INTEGER,
+    quantity                    INTEGER,
+    provider_id                 BIGINT,
+    visit_occurrence_id         BIGINT,
+    visit_detail_id             BIGINT,
+    procedure_source_value      VARCHAR(50),
+    procedure_source_concept_id INTEGER,
+    modifier_source_value       VARCHAR(50)
+);
+
+-- OMOP CDM: concept table (vocabulary lookup)
+CREATE TABLE concept (
+    concept_id          INTEGER       NOT NULL PRIMARY KEY,
+    concept_name        VARCHAR(255)  NOT NULL,
+    domain_id           VARCHAR(20)   NOT NULL,
+    vocabulary_id       VARCHAR(20)   NOT NULL,
+    concept_class_id    VARCHAR(20)   NOT NULL,
+    standard_concept    VARCHAR(1),
+    concept_code        VARCHAR(50)   NOT NULL,
+    valid_start_date    DATE          NOT NULL,
+    valid_end_date      DATE          NOT NULL,
+    invalid_reason      VARCHAR(1)
+);
+
+
+Example SQL:
+-- [Ground-truth SQL for this example task will be inserted here]
+-- Placeholder: this few-shot example will be completed once
+-- Zeinab's ground-truth SQL for this task is available.
+
+Example output (first 3 rows):
+case_id | activity              | timestamp
+--------+-----------------------+---------------------
+[Sample rows will be added when ground-truth SQL is available]
+────────────────────────────────────────────
+
+Now generate the SQL for THIS process:
+
+Process: Lab-Order-to-Result Cycle: Track the lifecycle of a laboratory test from specimen collection to result recording. The case_id should be the visit_occurrence_id. Activities include: Specimen Collected, Lab Result Recorded, Abnormal Result Flagged. Use specimen for collection events (specimen_datetime, joined via person_id) and measurement for result events (measurement_datetime, value_as_number, range_low, range_high). Flag a result as abnormal when value_as_number is outside range_low–range_high. Use the concept table to resolve measurement_concept_id and specimen_concept_id to human-readable names. Filter out NULL timestamps.
+
+Relevant OMOP CDM schema:
+-- ============================================================
+-- OMOP CDM Schema for Lab-Order-to-Result Cycle
+-- Task: T4
+-- Source: MIMIC-IV mapped to OMOP Common Data Model v5.4
+-- Generated from demo CSV column headers + OMOP CDM spec
+-- ============================================================
+-- OMOP CDM: measurement (lab results, vitals, other measurements)
+CREATE TABLE measurement (
+    measurement_id               BIGINT        NOT NULL PRIMARY KEY,
+    person_id                    BIGINT        NOT NULL,
+    measurement_concept_id       INTEGER       NOT NULL,
+    measurement_date             DATE          NOT NULL,
+    measurement_datetime         TIMESTAMP,
+    measurement_time             VARCHAR(10),
+    measurement_type_concept_id  INTEGER       NOT NULL,
+    operator_concept_id          INTEGER,
+    value_as_number              NUMERIC,
+    value_as_concept_id          INTEGER,
+    unit_concept_id              INTEGER,
+    range_low                    NUMERIC,
+    range_high                   NUMERIC,
+    provider_id                  BIGINT,
+    visit_occurrence_id          BIGINT,
+    visit_detail_id              BIGINT,
+    measurement_source_value     VARCHAR(50),
+    measurement_source_concept_id INTEGER,
+    unit_source_value            VARCHAR(50),
+    value_source_value           VARCHAR(50)
+);
+
+-- OMOP CDM: specimen (biological specimens collected)
+CREATE TABLE specimen (
+    specimen_id                  BIGINT        NOT NULL PRIMARY KEY,
+    person_id                    BIGINT        NOT NULL,
+    specimen_concept_id          INTEGER       NOT NULL,
+    specimen_type_concept_id     INTEGER       NOT NULL,
+    specimen_date                DATE          NOT NULL,
+    specimen_datetime            TIMESTAMP,
+    quantity                     NUMERIC,
+    unit_concept_id              INTEGER,
+    anatomic_site_concept_id     INTEGER,
+    disease_status_concept_id    INTEGER,
+    specimen_source_id           VARCHAR(50),
+    specimen_source_value        VARCHAR(50),
+    unit_source_value            VARCHAR(50),
+    anatomic_site_source_value   VARCHAR(50),
+    disease_status_source_value  VARCHAR(50)
+);
+
+-- OMOP CDM: visit_occurrence (hospital visits/admissions)
+CREATE TABLE visit_occurrence (
+    visit_occurrence_id           BIGINT        NOT NULL PRIMARY KEY,
+    person_id                     BIGINT        NOT NULL,
+    visit_concept_id              INTEGER       NOT NULL,
+    visit_start_date              DATE          NOT NULL,
+    visit_start_datetime          TIMESTAMP,
+    visit_end_date                DATE          NOT NULL,
+    visit_end_datetime            TIMESTAMP,
+    visit_type_concept_id         INTEGER       NOT NULL,
+    provider_id                   BIGINT,
+    care_site_id                  BIGINT,
+    visit_source_value            VARCHAR(50),
+    visit_source_concept_id       INTEGER,
+    admitting_source_concept_id   INTEGER,
+    admitting_source_value        VARCHAR(50),
+    discharge_to_concept_id       INTEGER,
+    discharge_to_source_value     VARCHAR(50),
+    preceding_visit_occurrence_id BIGINT
+);
+
+-- OMOP CDM: concept table (vocabulary lookup)
+CREATE TABLE concept (
+    concept_id          INTEGER       NOT NULL PRIMARY KEY,
+    concept_name        VARCHAR(255)  NOT NULL,
+    domain_id           VARCHAR(20)   NOT NULL,
+    vocabulary_id       VARCHAR(20)   NOT NULL,
+    concept_class_id    VARCHAR(20)   NOT NULL,
+    standard_concept    VARCHAR(1),
+    concept_code        VARCHAR(50)   NOT NULL,
+    valid_start_date    DATE          NOT NULL,
+    valid_end_date      DATE          NOT NULL,
+    invalid_reason      VARCHAR(1)
+);
+
+
+The output query MUST produce exactly three columns:
+  - case_id   : a unique identifier for each process instance (BIGINT)
+  - activity  : a human-readable name for the clinical event (VARCHAR)
+  - timestamp : when the event occurred (TIMESTAMP)
+
+Requirements:
+  - Use ONLY the tables defined in the schema above.
+  - Use UNION ALL to combine events from multiple source tables.
+  - Filter out any rows where timestamp IS NULL.
+  - Order results by case_id, timestamp.
+  - Return ONLY the SQL query — no explanation, no markdown fences.

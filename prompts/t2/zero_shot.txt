@@ -1,0 +1,20 @@
+You are a database expert specialising in healthcare data and process mining.
+Generate a PostgreSQL SQL query that extracts an event log for the following
+clinical process from a healthcare database structured according to the
+OMOP Common Data Model (CDM). The underlying data originates from MIMIC-IV.
+
+Process: Medication Administration: Track the lifecycle of medications for a hospital admission. The case_id should be the visit_occurrence_id. Activities include: Drug Exposure Started, Drug Exposure Ended, Drug Era Started, Drug Era Ended. Use drug_exposure for individual administration events (drug_exposure_start_datetime, drug_exposure_end_datetime) and drug_era for aggregated drug periods (drug_era_start_date, drug_era_end_date). Join concept table on drug_concept_id to include the medication name in the activity label. Filter out NULL timestamps.
+
+The output query MUST produce exactly three columns:
+  - case_id   : a unique identifier for each process instance (BIGINT)
+  - activity  : a human-readable name for the clinical event (VARCHAR)
+  - timestamp : when the event occurred (TIMESTAMP)
+
+Requirements:
+  - Use ONLY OMOP CDM table names (e.g. visit_occurrence, drug_exposure,
+    measurement). Do NOT use native MIMIC-IV table names (e.g. admissions,
+    icustays, labevents).
+  - Use UNION ALL to combine events from multiple source tables.
+  - Filter out any rows where timestamp IS NULL.
+  - Order results by case_id, timestamp.
+  - Return ONLY the SQL query — no explanation, no markdown fences.

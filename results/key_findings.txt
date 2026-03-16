@@ -1,0 +1,33 @@
+KEY FINDINGS (auto-generated from results)
+==================================================
+
+RQ1/RQ3 — Best LLM by M1:
+  GPT-4o: M1 avg = 91.1%
+  Claude Sonnet: M1 avg = 100.0%
+  Llama 3 70B: M1 avg = 71.1%
+  → Best: Claude Sonnet
+
+RQ2 — Best strategy by M1:
+  Zero-shot: M1 avg = 82.2%
+  Schema-aware: M1 avg = 88.9%
+  Few-shot: M1 avg = 91.1%
+  → Best: Few-shot
+
+RQ3 — Task difficulty (M1):
+  T1 (ICU Pathway): 100.0%
+  T2 (Medication Admin.): 63.0%
+  T3 (Sepsis Trajectory): 100.0%
+  T4 (Lab-Order Cycle): 74.1%
+  T5 (ED Flow): 100.0%
+  → Hardest: T2 (Medication Admin.)
+  → Easiest: T1 (ICU Pathway)
+
+M3/M4 Summary (executable queries with GT):
+  M3a case coverage (mean):     78.7%
+  M4a activity Jaccard (mean):  0.2%
+
+M5 Prompt Sensitivity:
+  GPT-4o: σ(mean) = 0.1156
+  Claude Sonnet: σ(mean) = 0.0120
+  Llama 3 70B: σ(mean) = 0.0458
+  → Most sensitive: GPT-4o
