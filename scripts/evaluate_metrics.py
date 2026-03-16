@@ -631,7 +631,7 @@ def run_evaluation(conn, db_type: str, m1_data: dict,
     for task in TASKS:
         # ── Ground truth ──────────────────────────────────────────────────
         gt_sql_file = GT_DIR / f"{task}_gt.sql"
-        # Also accept legacy naming from zeinab_packet
+        # Also accept legacy naming from author_packet
         if not gt_sql_file.exists():
             gt_sql_file = GT_DIR / f"{task}_icu_pathway_gt.sql"  # fallback
             # Try all _gt.sql files for this task
