@@ -18,7 +18,7 @@ Output: CSV files in experiment/sample_data/ named after OMOP tables:
 These CSVs are consumed by evaluate_metrics.py --duckdb-csv-dir sample_data/
 
 Usage:
-    python create_sample.py --pg-conn "host=10.224.188.122 port=5432 dbname=mimic user=saimir"
+    python create_sample.py --pg-conn "host=10.224.188.122 port=5432 dbname=mimic user=author"
     python create_sample.py --pg-conn "..." --n-icu 400 --n-sepsis 350 --n-ed 250
 """
 
