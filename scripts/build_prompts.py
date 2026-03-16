@@ -90,7 +90,7 @@ TASK_DESCRIPTIONS = {
     ),
 }
 
-# ── T4 worked example (written by Saimir; used as few-shot example) ────────
+# ── T4 worked example (written by author; used as few-shot example) ────────
 T4_WORKED_EXAMPLE_SQL = """\
 SELECT
     m.visit_occurrence_id AS case_id,
@@ -147,7 +147,7 @@ FEW_SHOT_EXAMPLES = {
 PLACEHOLDER_SQL = """\
 -- [Ground-truth SQL for this example task will be inserted here]
 -- Placeholder: this few-shot example will be completed once
--- Zeinab's ground-truth SQL for this task is available."""
+-- author's ground-truth SQL for this task is available."""
 
 PLACEHOLDER_OUTPUT = """\
 case_id | activity              | timestamp
