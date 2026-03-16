@@ -1,13 +1,34 @@
 # ELG with AI Experiment
 
-This repository contains the experiment artifacts for LLM-driven SQL event log extraction from OMOP CDM.
+This repository contains only the experiment artifacts and pipeline for LLM-driven SQL event log extraction from OMOP CDM (MIMIC-IV).
 
-Included:
-- ground_truth
-- scripts
-- schemas
-- prompts
-- outputs
-- results
+## Experiment contents
+- `experiment/ground_truth/`
+- `experiment/prompts/`
+- `experiment/outputs/`
+- `experiment/results/`
+- `experiment/schemas/`
+- `experiment/scripts/`
 
-Excluded: sample_data, local environment files, and non-essential folders.
+## Excluded from GitHub
+- `experiment/sample_data/` (local sample data, ignored)
+- API keys and `.env` secrets
+
+## Run instructions
+```bash
+cd experiment
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python scripts/build_prompts.py
+python scripts/run_llms.py
+python scripts/execute_sql.py
+python scripts/evaluate_metrics.py
+```
+
+## Key results to inspect
+- `experiment/results/executability.csv`
+- `experiment/results/completeness.csv`
+- `experiment/results/fidelity.csv`
+- `experiment/results/sensitivity.csv`
+- `experiment/results/summary.csv`
