@@ -30,9 +30,10 @@ UNION ALL
 -- ─── Activity 2: Condition Diagnosed ──────────────────────────────────────
 SELECT
     co.visit_occurrence_id AS case_id,
-    'Condition Diagnosed: ' || co.condition_concept_name AS activity,
+    'Condition Diagnosed: ' || c.concept_name AS activity,
     co.condition_start_datetime AS timestamp
 FROM condition_occurrence co
+JOIN concept c ON co.condition_concept_id = c.concept_id
 WHERE co.condition_start_datetime IS NOT NULL
   AND co.visit_occurrence_id IN (
       SELECT vo.visit_occurrence_id
