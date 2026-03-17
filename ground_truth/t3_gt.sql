@@ -1,5 +1,5 @@
 -- Ground-truth SQL for Task T3: Sepsis Treatment Trajectory
--- Author: 
+-- Author:  
 -- Date: 2026-03-13
 -- Data: MIMIC-IV in OMOP CDM format (PostgreSQL)
 --
