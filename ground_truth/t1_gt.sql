@@ -1,5 +1,5 @@
 -- Ground-truth SQL for Task T1: ICU Patient Pathway
--- Author: Saimir Bala (adapted from Zeinab Soleimani CDMPHI version)
+-- Author: 
 -- Date: 2026-03-13
 -- Data: MIMIC-IV in OMOP CDM format (PostgreSQL)
 --

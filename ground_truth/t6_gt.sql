@@ -1,5 +1,5 @@
 -- Ground-truth SQL for Task T6: Inpatient Diagnosis Pathway
--- Author: Saimir Bala
+-- Author: 
 -- Date: 2026-03-17
 -- Data: MIMIC-IV in OMOP CDM format (PostgreSQL)
 --

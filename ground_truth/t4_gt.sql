@@ -1,5 +1,5 @@
 -- Ground-truth SQL for Task T4: Lab-Order-to-Result Cycle
--- Author: Saimir Bala (worked example for Zeinab)
+-- Author: 
 -- Date: 2026-03-04
 -- Data: MIMIC-IV in OMOP CDM format
 --
