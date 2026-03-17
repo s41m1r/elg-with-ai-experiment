@@ -1,0 +1,55 @@
+WITH icu_pathway AS (
+  SELECT 
+    p.person_id,
+    v.visit_occurrence_id,
+    ROW_NUMBER() OVER (PARTITION BY p.person_id, v.visit_occurrence_id ORDER BY c.start_date) AS row_num,
+    c.concept_id,
+    c.start_date AS timestamp,
+    c.source_value AS activity
+  FROM 
+    persons p
+  JOIN 
+    visit_occurrence v ON p.person_id = v.person_id
+  JOIN 
+    condition_occurrence c ON v.visit_occurrence_id = c.visit_occurrence_id
+  WHERE 
+    c.concept_id IN (
+      SELECT concept_id FROM concept WHERE concept_name IN ('ICU admission', 'ICU transfer', 'Discharge from ICU')
+    )
+),
+icu_pathway_filtered AS (
+  SELECT 
+    person_id,
+    visit_occurrence_id,
+    concept_id,
+    timestamp,
+    activity,
+    row_num
+  FROM 
+    icu_pathway
+  WHERE 
+    row_num = 1
+),
+case_id_map AS (
+  SELECT 
+    person_id,
+    visit_occurrence_id,
+    MIN(timestamp) AS admission_date,
+    MAX(timestamp) AS discharge_date
+  FROM 
+    icu_pathway_filtered
+  GROUP BY 
+    person_id, visit_occurrence_id
+)
+SELECT 
+  ROW_NUMBER() OVER (ORDER BY c.person_id, c.visit_occurrence_id) AS case_id,
+  c.activity,
+  c.timestamp
+FROM 
+  icu_pathway c
+JOIN 
+  case_id_map m ON c.person_id = m.person_id AND c.visit_occurrence_id = m.visit_occurrence_id
+WHERE 
+  c.timestamp BETWEEN m.admission_date AND m.discharge_date
+ORDER BY 
+  case_id, timestamp;

@@ -36,13 +36,14 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 EXPERIMENT_DIR = SCRIPT_DIR.parent
 RESULTS_DIR = EXPERIMENT_DIR / "results"
 
-TASKS = ["t1", "t2", "t3", "t4", "t5"]
+TASKS = ["t1", "t2", "t3", "t4", "t5", "t6"]
 TASK_LABELS = {
     "t1": "ICU Pathway",
     "t2": "Medication Admin.",
     "t3": "Sepsis Trajectory",
     "t4": "Lab-Order Cycle",
     "t5": "ED Flow",
+    "t6": "Diagnosis Pathway",
 }
 LLM_LABELS = {
     "gpt4o":  "GPT-4o",
@@ -50,12 +51,13 @@ LLM_LABELS = {
     "llama3": "Llama 3 70B",
 }
 STRATEGY_LABELS = {
+    "naive":        "Naive",
     "zero_shot":    "Zero-shot",
     "schema_aware": "Schema-aware",
     "few_shot":     "Few-shot",
 }
 LLMS = ["gpt4o", "claude", "llama3"]
-STRATEGIES = ["zero_shot", "schema_aware", "few_shot"]
+STRATEGIES = ["naive", "zero_shot", "schema_aware", "few_shot"]
 REPETITIONS = [1, 2, 3]
 
 # ---------------------------------------------------------------------------
@@ -202,11 +204,11 @@ def table_m1_by_llm_strategy(agg: dict) -> str:
         "% === Table: M1 Executability by LLM and Prompt Strategy ===",
         "\\begin{table}[t]",
         "  \\caption{M1 Executability (\\%) by LLM and prompt strategy. "
-        "Each cell: pass/total (15 runs).}\\label{tab:m1grid}",
+        "Each cell: pass/total (18 runs).}\\label{tab:m1grid}",
         "  \\centering",
-        "  \\begin{tabular}{@{}lcccc@{}}",
+        "  \\begin{tabular}{@{}lccccc@{}}",
         "    \\toprule",
-        "    \\textbf{LLM} & \\textbf{Zero-shot} & \\textbf{Schema-aware} "
+        "    \\textbf{LLM} & \\textbf{Naive} & \\textbf{Zero-shot} & \\textbf{Schema-aware} "
         "& \\textbf{Few-shot} & \\textbf{Overall} \\\\",
         "    \\midrule",
     ]
@@ -264,7 +266,7 @@ def table_m1_by_task(agg: dict) -> str:
         "% === Table: M1 Executability by Task ===",
         "\\begin{table}[t]",
         "  \\caption{M1 Executability (\\%) by clinical process task "
-        "(27 runs each).}\\label{tab:m1task}",
+        "(36 runs each).}\\label{tab:m1task}",
         "  \\centering",
         "  \\begin{tabular}{@{}llcc@{}}",
         "    \\toprule",
@@ -331,7 +333,7 @@ def table_m3_m4_main(agg: dict, use_color: bool = True) -> str:
     lines = [
         "% === Table: M3/M4 Main Results (averaged across tasks) ===",
         "\\begin{table}[t]",
-        "  \\caption{M3 Completeness and M4 Fidelity results averaged across all five tasks. "
+        "  \\caption{M3 Completeness and M4 Fidelity results averaged across all six tasks. "
         "Bold = best in column. --- = ground-truth SQL not yet available.}\\label{tab:m3m4}",
         "  \\centering",
         "  \\begin{tabular}{@{}llccc@{}}",
@@ -386,7 +388,7 @@ def table_m5_sensitivity(agg: dict, sens_rows: list) -> str:
         "% === Table: M5 Prompt Sensitivity ===",
         "\\begin{table}[t]",
         "  \\caption{M5 Prompt Sensitivity: standard deviation of M1, M3a, M3b, M4a "
-        "across the three prompt strategies, per LLM and clinical process task. "
+        "across the four prompt strategies, per LLM and clinical process task. "
         "Higher = more sensitive to prompt choice.}\\label{tab:m5}",
         "  \\centering",
         "  \\begin{tabular}{@{}llcccc@{}}",

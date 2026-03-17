@@ -1,0 +1,56 @@
+```sql
+WITH icu_pathway AS (
+  SELECT 
+    person_id,
+    visit_occurrence_id,
+    MIN(CASE WHEN visit_detail_concept_id = 32037 THEN visit_start_date END) AS icu_admission_date,
+    MAX(CASE WHEN visit_detail_concept_id = 32038 THEN visit_end_date END) AS icu_discharge_date
+  FROM 
+    visit_detail
+  WHERE 
+    visit_detail_concept_id IN (32037, 32038)
+  GROUP BY 
+    person_id, visit_occurrence_id
+),
+icu_transfers AS (
+  SELECT 
+    person_id,
+    visit_occurrence_id,
+    visit_start_date AS transfer_date,
+    visit_detail_concept_id AS transfer_type
+  FROM 
+    visit_detail
+  WHERE 
+    visit_detail_concept_id IN (32039, 32040)
+),
+event_log AS (
+  SELECT 
+    person_id AS case_id,
+    'ICU Admission' AS activity,
+    icu_admission_date AS timestamp
+  FROM 
+    icu_pathway
+  UNION ALL
+  SELECT 
+    person_id AS case_id,
+    'ICU Transfer' AS activity,
+    transfer_date AS timestamp
+  FROM 
+    icu_transfers
+  UNION ALL
+  SELECT 
+    person_id AS case_id,
+    'ICU Discharge' AS activity,
+    icu_discharge_date AS timestamp
+  FROM 
+    icu_pathway
+)
+SELECT 
+  case_id,
+  activity,
+  timestamp
+FROM 
+  event_log
+ORDER BY 
+  case_id, timestamp;
+```

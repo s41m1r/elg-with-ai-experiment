@@ -1,0 +1,1 @@
+Generate a PostgreSQL query that extracts an event log with columns (case_id, activity, timestamp) for the following clinical process: ICU patient pathway (admission through ICU transfer(s) to discharge) — from a healthcare database structured according to the OMOP Common Data Model (CDM).

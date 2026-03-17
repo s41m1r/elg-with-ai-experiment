@@ -1,0 +1,76 @@
+WITH icu_visits AS (
+    SELECT DISTINCT
+        vo.person_id,
+        vo.visit_occurrence_id,
+        vo.visit_start_datetime,
+        vo.visit_end_datetime
+    FROM visit_occurrence vo
+    JOIN care_site cs ON vo.care_site_id = cs.care_site_id
+    WHERE UPPER(cs.care_site_name) LIKE '%ICU%' 
+       OR UPPER(cs.care_site_name) LIKE '%INTENSIVE CARE%'
+       OR cs.care_site_source_value IN ('ICU', 'MICU', 'SICU', 'CVICU', 'NICU', 'PICU')
+),
+event_log AS (
+    -- ICU Admission
+    SELECT 
+        CAST(iv.person_id AS VARCHAR) || '_' || CAST(iv.visit_occurrence_id AS VARCHAR) as case_id,
+        'ICU_Admission' as activity,
+        iv.visit_start_datetime as timestamp
+    FROM icu_visits iv
+    
+    UNION ALL
+    
+    -- ICU Transfers (between different ICU units)
+    SELECT 
+        CAST(iv.person_id AS VARCHAR) || '_' || CAST(iv.visit_occurrence_id AS VARCHAR) as case_id,
+        'ICU_Transfer_' || cs_to.care_site_name as activity,
+        vo_detail.visit_start_datetime as timestamp
+    FROM icu_visits iv
+    JOIN visit_detail vd ON iv.visit_occurrence_id = vd.visit_occurrence_id
+    JOIN visit_occurrence vo_detail ON vd.visit_detail_id = vo_detail.visit_occurrence_id
+    JOIN care_site cs_to ON vo_detail.care_site_id = cs_to.care_site_id
+    WHERE vo_detail.visit_start_datetime > iv.visit_start_datetime
+      AND vo_detail.visit_start_datetime < iv.visit_end_datetime
+    
+    UNION ALL
+    
+    -- Procedures during ICU stay
+    SELECT 
+        CAST(iv.person_id AS VARCHAR) || '_' || CAST(iv.visit_occurrence_id AS VARCHAR) as case_id,
+        'Procedure_' || c.concept_name as activity,
+        po.procedure_datetime as timestamp
+    FROM icu_visits iv
+    JOIN procedure_occurrence po ON iv.person_id = po.person_id 
+        AND po.procedure_datetime BETWEEN iv.visit_start_datetime AND iv.visit_end_datetime
+    JOIN concept c ON po.procedure_concept_id = c.concept_id
+    WHERE po.visit_occurrence_id = iv.visit_occurrence_id
+    
+    UNION ALL
+    
+    -- Drug administrations during ICU stay
+    SELECT 
+        CAST(iv.person_id AS VARCHAR) || '_' || CAST(iv.visit_occurrence_id AS VARCHAR) as case_id,
+        'Drug_' || c.concept_name as activity,
+        de.drug_exposure_start_datetime as timestamp
+    FROM icu_visits iv
+    JOIN drug_exposure de ON iv.person_id = de.person_id 
+        AND de.drug_exposure_start_datetime BETWEEN iv.visit_start_datetime AND iv.visit_end_datetime
+    JOIN concept c ON de.drug_concept_id = c.concept_id
+    WHERE de.visit_occurrence_id = iv.visit_occurrence_id
+    
+    UNION ALL
+    
+    -- ICU Discharge
+    SELECT 
+        CAST(iv.person_id AS VARCHAR) || '_' || CAST(iv.visit_occurrence_id AS VARCHAR) as case_id,
+        'ICU_Discharge' as activity,
+        iv.visit_end_datetime as timestamp
+    FROM icu_visits iv
+)
+SELECT 
+    case_id,
+    activity,
+    timestamp
+FROM event_log
+WHERE timestamp IS NOT NULL
+ORDER BY case_id, timestamp;

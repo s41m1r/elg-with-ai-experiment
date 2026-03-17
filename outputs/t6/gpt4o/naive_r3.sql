@@ -1,0 +1,12 @@
+SELECT 
+    visit_occurrence.visit_occurrence_id AS case_id,
+    concept.concept_name AS activity,
+    visit_occurrence.visit_start_datetime AS timestamp
+FROM 
+    visit_occurrence
+JOIN 
+    concept ON visit_occurrence.visit_concept_id = concept.concept_id
+WHERE 
+    concept.concept_name IN ('Inpatient Visit', 'Diagnosis', 'Discharge')
+ORDER BY 
+    visit_occurrence.visit_start_datetime;

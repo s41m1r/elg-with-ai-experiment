@@ -6,7 +6,7 @@ Loads prompt files from experiment/prompts/, sends them to 3 LLMs
 (GPT-4o, Claude Sonnet, Llama 3 70B), extracts SQL from responses,
 and saves outputs + logs.
 
-Experiment matrix: 5 tasks × 3 strategies × 3 LLMs × 3 repetitions = 135 calls.
+Experiment matrix: 6 tasks × 4 strategies × 3 LLMs × 3 repetitions = 216 calls.
 
 ⚠️  DUA COMPLIANCE: This script sends ONLY prompt text (task descriptions,
     OMOP CDM DDL schemas, synthetic example rows) to LLM APIs. No real
@@ -59,8 +59,8 @@ PROMPTS_DIR = EXPERIMENT_DIR / "prompts"
 OUTPUTS_DIR = EXPERIMENT_DIR / "outputs"
 RESULTS_DIR = EXPERIMENT_DIR / "results"
 
-TASKS = ["t1", "t2", "t3", "t4", "t5"]
-STRATEGIES = ["zero_shot", "schema_aware", "few_shot"]
+TASKS = ["t1", "t2", "t3", "t4", "t5", "t6"]
+STRATEGIES = ["naive", "zero_shot", "schema_aware", "few_shot"]
 
 # LLM configurations
 LLMS = {

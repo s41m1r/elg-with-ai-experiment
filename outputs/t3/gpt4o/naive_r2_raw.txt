@@ -1,0 +1,69 @@
+```sql
+SELECT 
+    visit_occurrence.visit_occurrence_id AS case_id,
+    'Diagnosis' AS activity,
+    condition_occurrence.condition_start_datetime AS timestamp
+FROM 
+    condition_occurrence
+JOIN 
+    visit_occurrence ON condition_occurrence.visit_occurrence_id = visit_occurrence.visit_occurrence_id
+WHERE 
+    condition_occurrence.condition_concept_id IN (
+        SELECT concept_id 
+        FROM concept 
+        WHERE concept_name ILIKE '%sepsis%'
+    )
+
+UNION ALL
+
+SELECT 
+    visit_occurrence.visit_occurrence_id AS case_id,
+    'Lab Test' AS activity,
+    measurement.measurement_datetime AS timestamp
+FROM 
+    measurement
+JOIN 
+    visit_occurrence ON measurement.visit_occurrence_id = visit_occurrence.visit_occurrence_id
+WHERE 
+    measurement.measurement_concept_id IN (
+        SELECT concept_id 
+        FROM concept 
+        WHERE concept_name ILIKE '%lab test%'
+    )
+
+UNION ALL
+
+SELECT 
+    visit_occurrence.visit_occurrence_id AS case_id,
+    'Antibiotics' AS activity,
+    drug_exposure.drug_exposure_start_datetime AS timestamp
+FROM 
+    drug_exposure
+JOIN 
+    visit_occurrence ON drug_exposure.visit_occurrence_id = visit_occurrence.visit_occurrence_id
+WHERE 
+    drug_exposure.drug_concept_id IN (
+        SELECT concept_id 
+        FROM concept 
+        WHERE concept_name ILIKE '%antibiotic%'
+    )
+
+UNION ALL
+
+SELECT 
+    visit_occurrence.visit_occurrence_id AS case_id,
+    'Vitals' AS activity,
+    observation.observation_datetime AS timestamp
+FROM 
+    observation
+JOIN 
+    visit_occurrence ON observation.visit_occurrence_id = visit_occurrence.visit_occurrence_id
+WHERE 
+    observation.observation_concept_id IN (
+        SELECT concept_id 
+        FROM concept 
+        WHERE concept_name ILIKE '%vital sign%'
+    )
+ORDER BY 
+    case_id, timestamp;
+```

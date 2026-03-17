@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-build_prompts.py — Generate 15 prompt files (5 tasks × 3 strategies)
+build_prompts.py — Generate 24 prompt files (6 tasks × 4 strategies)
 for the LLM event log extraction benchmark.
 
 Output: experiment/prompts/{task}/{strategy}.txt
@@ -88,6 +88,18 @@ TASK_DESCRIPTIONS = {
         "(procedure_datetime). All tables join via visit_occurrence_id. "
         "Filter out NULL timestamps."
     ),
+    "t6": (
+        "Inpatient Diagnosis Pathway: Track condition diagnoses over the course "
+        "of an inpatient hospital stay from admission through each recorded diagnosis "
+        "to discharge. The case_id should be the visit_occurrence_id (inpatient visit). "
+        "Activities include: Hospital Admission, Condition Diagnosed (with the condition "
+        "name from the concept table), Hospital Discharge. Filter visit_occurrence to "
+        "inpatient visits using visit_concept_id = 9201 (Inpatient Visit) or 262 "
+        "(Emergency Room and Inpatient Visit). Use condition_occurrence for diagnosis "
+        "events (condition_start_datetime), joined via visit_occurrence_id. Use the "
+        "concept table to resolve condition_concept_id to human-readable names. "
+        "Filter out NULL timestamps."
+    ),
 }
 
 # ── T4 worked example (written by author; used as few-shot example) ────────
@@ -141,6 +153,7 @@ FEW_SHOT_EXAMPLES = {
     "t3": "t1",  # Sepsis      ← ICU pathway example (requires t1 GT, use placeholder)
     "t4": "t5",  # Lab cycle   ← ED flow example   (requires t5 GT, use placeholder)
     "t5": "t1",  # ED flow     ← ICU pathway example
+    "t6": "t4",  # Diagnosis pathway ← Lab cycle example
 }
 
 # Placeholder for tasks where ground truth is not yet available
@@ -170,8 +183,33 @@ def get_task_label(task_id):
         "t3": "T3: Sepsis Treatment Trajectory",
         "t4": "T4: Lab-Order-to-Result Cycle",
         "t5": "T5: Emergency Department Flow",
+        "t6": "T6: Inpatient Diagnosis Pathway",
     }
     return labels[task_id]
+
+def get_task_process_name(task_id):
+    """Return a short natural-language process name for the naive prompt."""
+    names = {
+        "t1": "ICU patient pathway (admission through ICU transfer(s) to discharge)",
+        "t2": "medication administration lifecycle for a hospital admission",
+        "t3": "sepsis treatment trajectory (diagnosis, lab tests, antibiotics, vitals)",
+        "t4": "lab-order-to-result cycle (specimen collection through result recording)",
+        "t5": "emergency department patient flow (arrival to disposition)",
+        "t6": "inpatient diagnosis pathway (admission through diagnoses to discharge)",
+    }
+    return names[task_id]
+
+
+def make_naive(task_id):
+    """Naive strategy: minimal natural-language request, no schema hints or table names."""
+    process_name = get_task_process_name(task_id)
+    return f"""\
+Generate a PostgreSQL query that extracts an event log with columns \
+(case_id, activity, timestamp) for the following clinical process: \
+{process_name} — from a healthcare database structured according to \
+the OMOP Common Data Model (CDM).
+"""
+
 
 def make_zero_shot(task_id):
     return f"""\
@@ -272,7 +310,7 @@ Requirements:
 """
 
 def main():
-    tasks = ["t1", "t2", "t3", "t4", "t5"]
+    tasks = ["t1", "t2", "t3", "t4", "t5", "t6"]
 
     # Pre-load all schemas
     schemas = {t: load_schema(t) for t in tasks}
@@ -298,6 +336,7 @@ def main():
         ex_sql, ex_out = few_shot_sql.get(ex_task_id, (PLACEHOLDER_SQL, PLACEHOLDER_OUTPUT))
 
         prompts = {
+            "naive":        make_naive(task_id),
             "zero_shot":    make_zero_shot(task_id),
             "schema_aware": make_schema_aware(task_id, schema_ddl),
             "few_shot":     make_few_shot(task_id, schema_ddl, ex_task_id,

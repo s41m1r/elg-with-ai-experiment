@@ -1,0 +1,28 @@
+```sql
+SELECT 
+    ca.person_id AS case_id,
+    COALESCE(
+        CASE 
+            WHEN ca.concept_id = 4075633 THEN 'Medication Ordered'
+            WHEN ca.concept_id = 4075634 THEN 'Medication Dispensed'
+            WHEN ca.concept_id = 4075635 THEN 'Medication Administered'
+        END,
+        'Unknown'
+    ) AS activity,
+    ca.start_date AS timestamp
+FROM 
+    condition_era ca
+WHERE 
+    ca.concept_id IN (4075633, 4075634, 4075635)
+    AND ca.person_id IN (
+        SELECT 
+            person_id 
+        FROM 
+            visit_occurrence 
+        WHERE 
+            visit_concept_id = 9201  -- Hospital admission
+    )
+ORDER BY 
+    ca.person_id, 
+    ca.start_date;
+```

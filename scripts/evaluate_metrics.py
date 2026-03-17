@@ -10,7 +10,7 @@ Computes:
   M4 — Process Fidelity
        M4a: activity Jaccard    = |A_llm ∩ A_gt| / |A_llm ∪ A_gt|
   M5 — Prompt Sensitivity
-       For each (LLM, task): std of M1, M3a, M3b, M4a across S1/S2/S3
+       For each (LLM, task): std of M1, M3a, M3b, M4a across S0/S1/S2/S3
 
 Prerequisite: M1/M2 results must exist in results/executability.csv
               Ground-truth SQL files must be in ground_truth/
@@ -61,9 +61,9 @@ OUTPUTS_DIR = EXPERIMENT_DIR / "outputs"
 RESULTS_DIR = EXPERIMENT_DIR / "results"
 GT_DIR = EXPERIMENT_DIR / "ground_truth"
 
-TASKS = ["t1", "t2", "t3", "t4", "t5"]
+TASKS = ["t1", "t2", "t3", "t4", "t5", "t6"]
 LLMS = ["gpt4o", "claude", "llama3"]
-STRATEGIES = ["zero_shot", "schema_aware", "few_shot"]
+STRATEGIES = ["naive", "zero_shot", "schema_aware", "few_shot"]
 REPETITIONS = [1, 2, 3]
 
 SQL_TIMEOUT = 600  # seconds (full MIMIC-IV — T3 can take 7+ min)

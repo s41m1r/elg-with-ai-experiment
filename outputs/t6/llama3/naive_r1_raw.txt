@@ -1,0 +1,37 @@
+```sql
+SELECT 
+    v.person_id AS case_id,
+    COALESCE(
+        CASE 
+            WHEN v.visit_occurrence_id IS NOT NULL THEN 'Admission'
+            WHEN c.condition_occurrence_id IS NOT NULL THEN 'Diagnosis'
+            WHEN d.discharge_date IS NOT NULL THEN 'Discharge'
+        END,
+        'Unknown'
+    ) AS activity,
+    COALESCE(
+        v.admit_date,
+        c.condition_start_date,
+        d.discharge_date
+    ) AS timestamp
+FROM 
+    visit_occurrence v
+LEFT JOIN 
+    condition_occurrence c ON v.person_id = c.person_id AND v.visit_occurrence_id = c.visit_occurrence_id
+LEFT JOIN 
+    (
+        SELECT 
+            person_id,
+            visit_occurrence_id,
+            discharge_date
+        FROM 
+            visit_detail
+        WHERE 
+            visit_detail_concept_id = 44818593  -- Discharge concept ID
+    ) d ON v.person_id = d.person_id AND v.visit_occurrence_id = d.visit_occurrence_id
+WHERE 
+    v.visit_concept_id IN (9201, 9202, 9203)  -- Inpatient visit concept IDs
+ORDER BY 
+    v.person_id, 
+    COALESCE(v.admit_date, c.condition_start_date, d.discharge_date);
+```

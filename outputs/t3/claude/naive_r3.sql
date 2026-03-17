@@ -1,0 +1,70 @@
+WITH sepsis_cohort AS (
+    SELECT DISTINCT p.person_id as case_id
+    FROM person p
+    JOIN condition_occurrence co ON p.person_id = co.person_id
+    WHERE co.condition_concept_id IN (
+        SELECT concept_id 
+        FROM concept 
+        WHERE vocabulary_id = 'SNOMED' 
+        AND concept_code IN ('91302008', '10001005', '91302008', '2776000')
+    )
+),
+events AS (
+    -- Diagnosis events
+    SELECT 
+        sc.case_id,
+        'Diagnosis: ' || c.concept_name as activity,
+        co.condition_start_datetime as timestamp
+    FROM sepsis_cohort sc
+    JOIN condition_occurrence co ON sc.case_id = co.person_id
+    JOIN concept c ON co.condition_concept_id = c.concept_id
+    WHERE co.condition_start_datetime IS NOT NULL
+    
+    UNION ALL
+    
+    -- Lab test events
+    SELECT 
+        sc.case_id,
+        'Lab Test: ' || c.concept_name as activity,
+        m.measurement_datetime as timestamp
+    FROM sepsis_cohort sc
+    JOIN measurement m ON sc.case_id = m.person_id
+    JOIN concept c ON m.measurement_concept_id = c.concept_id
+    WHERE c.domain_id = 'Measurement'
+    AND c.concept_class_id IN ('Lab Test', 'Clinical Observation')
+    AND m.measurement_datetime IS NOT NULL
+    
+    UNION ALL
+    
+    -- Antibiotic administration
+    SELECT 
+        sc.case_id,
+        'Antibiotic: ' || c.concept_name as activity,
+        de.drug_exposure_start_datetime as timestamp
+    FROM sepsis_cohort sc
+    JOIN drug_exposure de ON sc.case_id = de.person_id
+    JOIN concept c ON de.drug_concept_id = c.concept_id
+    JOIN concept_ancestor ca ON c.concept_id = ca.descendant_concept_id
+    WHERE ca.ancestor_concept_id = 21602796  -- Anti-bacterial agent
+    AND de.drug_exposure_start_datetime IS NOT NULL
+    
+    UNION ALL
+    
+    -- Vital signs
+    SELECT 
+        sc.case_id,
+        'Vital Sign: ' || c.concept_name as activity,
+        m.measurement_datetime as timestamp
+    FROM sepsis_cohort sc
+    JOIN measurement m ON sc.case_id = m.person_id
+    JOIN concept c ON m.measurement_concept_id = c.concept_id
+    WHERE c.concept_id IN (3004249, 3012888, 3024171, 3013762, 3027018)  -- BP, HR, Temp, RR, O2Sat
+    AND m.measurement_datetime IS NOT NULL
+)
+SELECT 
+    case_id,
+    activity,
+    timestamp
+FROM events
+WHERE timestamp IS NOT NULL
+ORDER BY case_id, timestamp;

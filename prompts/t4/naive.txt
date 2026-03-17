@@ -1,0 +1,1 @@
+Generate a PostgreSQL query that extracts an event log with columns (case_id, activity, timestamp) for the following clinical process: lab-order-to-result cycle (specimen collection through result recording) — from a healthcare database structured according to the OMOP Common Data Model (CDM).

@@ -1,0 +1,15 @@
+SELECT 
+    v.person_id AS case_id,
+    CASE 
+        WHEN v.visit_occurrence_id = (SELECT MIN(visit_occurrence_id) FROM visit_occurrence vo WHERE vo.person_id = v.person_id) THEN 'Arrival'
+        WHEN v.visit_occurrence_id = (SELECT MAX(visit_occurrence_id) FROM visit_occurrence vo WHERE vo.person_id = v.person_id) THEN 'Disposition'
+        ELSE 'Visit'
+    END AS activity,
+    v.visit_start_date AS timestamp
+FROM 
+    visit_occurrence v
+WHERE 
+    v.visit_concept_id IN (SELECT concept_id FROM concept WHERE concept_name IN ('Emergency room visit', 'Emergency department visit'))
+ORDER BY 
+    v.person_id, 
+    v.visit_start_date;
