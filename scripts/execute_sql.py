@@ -214,13 +214,26 @@ def execute_sql_file(sql_path: Path, conn, db_type: str, **kwargs) -> dict:
 
     try:
         if db_type == "duckdb":
-            result = conn.execute(sql_text)
+            # Use the same safe approach as PostgreSQL: LIMIT 5 sample +
+            # separate COUNT subquery to avoid loading huge result sets into
+            # memory (some LLM queries produce cross-join explosions with M rows).
+            import re as _re
+            wrapped_sql = sql_text.rstrip().rstrip(";")
+            sql_for_sample = _re.sub(
+                r'\bORDER\s+BY\b[^;]*$', '', wrapped_sql,
+                flags=_re.IGNORECASE | _re.DOTALL
+            ).strip()
+            # 1. Sample rows + column metadata
+            result = conn.execute(f"SELECT * FROM ({sql_for_sample}) AS _q LIMIT 5")
             columns = [desc[0] for desc in result.description]
-            # DuckDB: get types from description
             column_types = [str(desc[1]) for desc in result.description]
-            rows = result.fetchall()
-            row_count = len(rows)
-            sample_rows = rows[:5]
+            sample_rows = result.fetchall()
+            if kwargs.get("skip_count", False):
+                row_count = -1
+            else:
+                # 2. Row count via subquery
+                count_res = conn.execute(f"SELECT COUNT(*) FROM ({wrapped_sql}) AS _q")
+                row_count = count_res.fetchone()[0]
         else:
             # PostgreSQL — wrap in subquery to avoid fetching all rows from
             # large tables (e.g., T3 measurement can return 200M+ rows).

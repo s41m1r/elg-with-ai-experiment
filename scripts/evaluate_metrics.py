@@ -221,36 +221,56 @@ def run_sql(conn, db_type: str, sql: str, label: str = "",
                 pass
 
         else:
-            # DuckDB: materialize into a temp table to avoid re-executing SQL 4×.
-            # Critical for large queries (T3: 1.4M rows, T4: 3M rows on sample data).
+            # DuckDB: use direct subqueries for aggregates to avoid materializing
+            # huge result sets (some LLM queries produce 100M+ rows via cartesian joins).
+            # DISTINCT aggregates use hash-agg and are fast; COUNT(*) is skipped
+            # (cartesian joins can take minutes — M3c is secondary to M3a/M3b/M4a).
             import re as _re
-            import time as _time
-            tname = f"_elg_tmp_{int(_time.time() * 1000) % 100000}"
-            # Strip trailing ORDER BY before materialization (irrelevant for aggregates)
+            import threading as _threading
+            # Strip trailing ORDER BY (irrelevant for aggregates)
             sql_no_order = _re.sub(
                 r'\bORDER\s+BY\b[^;]*$', '', sql.rstrip().rstrip(";"),
                 flags=_re.IGNORECASE | _re.DOTALL
             ).strip()
-            conn.execute(f"CREATE OR REPLACE TABLE {tname} AS ({sql_no_order})")
+            sub = f"({sql_no_order})"
 
-            def execute_tmp(q):
-                return conn.execute(q.replace("_log", tname)).fetchall()
+            # Helper: run a DuckDB query with a timeout (seconds).
+            # Returns fetchall() result or None on timeout/error.
+            def _timed_query(q, timeout_s=30):
+                result_holder = [None]
+                exc_holder = [None]
+                def _run():
+                    try:
+                        result_holder[0] = conn.execute(q).fetchall()
+                    except Exception as e:
+                        exc_holder[0] = e
+                t = _threading.Thread(target=_run, daemon=True)
+                t.start()
+                t.join(timeout_s)
+                if t.is_alive():
+                    return None  # timed out
+                if exc_holder[0]:
+                    return None
+                return result_holder[0]
 
-            # 1. Row count
-            count_rows = execute_tmp("SELECT COUNT(*) FROM _log")
-            row_count = count_rows[0][0] if count_rows else 0
+            # 1. Row count — COUNT(*) with 5s timeout (skip for huge cartesian joins;
+            #    M3c is not meaningful if row count is 100x the GT anyway)
+            count_rows = _timed_query(f"SELECT COUNT(*) FROM {sub} AS _q", timeout_s=5)
+            row_count = count_rows[0][0] if count_rows else -1
 
-            # 2. Distinct case_ids
-            case_rows = execute_tmp(
-                "SELECT DISTINCT case_id FROM _log WHERE case_id IS NOT NULL"
+            # 2. Distinct case_ids (hash-agg, fast even for large inputs)
+            case_rows = _timed_query(
+                f"SELECT DISTINCT case_id FROM {sub} AS _q WHERE case_id IS NOT NULL",
+                timeout_s=60
             )
-            case_ids = set(r[0] for r in case_rows)
+            case_ids = set(r[0] for r in case_rows) if case_rows is not None else set()
 
-            # 3. Distinct activity labels
-            act_rows = execute_tmp(
-                "SELECT DISTINCT activity FROM _log WHERE activity IS NOT NULL"
+            # 3. Distinct activity labels (hash-agg, fast)
+            act_rows = _timed_query(
+                f"SELECT DISTINCT activity FROM {sub} AS _q WHERE activity IS NOT NULL",
+                timeout_s=60
             )
-            activities = set(str(r[0]).strip() for r in act_rows)
+            activities = set(str(r[0]).strip() for r in act_rows) if act_rows is not None else set()
 
             # 4. Sample traces for M4b (small number of cases only)
             sample_rows = []
@@ -262,19 +282,13 @@ def run_sql(conn, db_type: str, sql: str, label: str = "",
                         for c in sample_case_ids
                     )
                     try:
-                        sample_rows = execute_tmp(
-                            f"SELECT case_id, activity, timestamp FROM _log "
+                        sample_rows = conn.execute(
+                            f"SELECT case_id, activity, timestamp FROM {sub} AS _q "
                             f"WHERE case_id IN ({id_list}) "
                             f"ORDER BY case_id, timestamp"
-                        )
+                        ).fetchall()
                     except Exception:
                         sample_rows = []  # M4b is optional; don't fail on this
-
-            # Clean up temp table
-            try:
-                conn.execute(f"DROP TABLE IF EXISTS {tname}")
-            except Exception:
-                pass
 
         return {
             "success": True,

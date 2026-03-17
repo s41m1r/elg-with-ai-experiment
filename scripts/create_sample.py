@@ -3,11 +3,13 @@
 create_sample.py — Extract a stratified patient sample from full MIMIC-IV PostgreSQL
                    and export as CSVs compatible with the DuckDB evaluation pipeline.
 
-Strategy: ~1 000 patients, stratified to guarantee all five clinical processes:
+Strategy: ~1 000 patients, stratified to guarantee all six clinical processes:
   - 400 ICU patients           (T1 ICU Pathway + likely T2 Medication + T4 Lab Cycle)
   - 350 Sepsis patients        (T3 Sepsis Trajectory, some overlap with above)
   - 250 ED-only patients       (T5 ED Flow — people with ED visit but not in ICU set)
-  Unique union → ~800–1 000 patients total
+  - 150 Inpatient-only patients (T6 Inpatient Diagnosis Pathway — pure inpatient not
+                                  already in ICU/sepsis/ED cohorts)
+  Unique union → ~900–1 100 patients total
 
 Output: CSV files in experiment/sample_data/ named after OMOP tables:
   visit_occurrence.csv, visit_detail.csv, condition_occurrence.csv,
@@ -19,7 +21,7 @@ These CSVs are consumed by evaluate_metrics.py --duckdb-csv-dir sample_data/
 
 Usage:
     python create_sample.py --pg-conn "host=10.224.188.122 port=5432 dbname=mimic user=author"
-    python create_sample.py --pg-conn "..." --n-icu 400 --n-sepsis 350 --n-ed 250
+    python create_sample.py --pg-conn "..." --n-icu 400 --n-sepsis 350 --n-ed 250 --n-inpatient 150
 """
 
 import argparse
@@ -110,10 +112,16 @@ def stream_csv(conn, sql: str, path: Path, batch_size: int = 5000):
     with conn.cursor(cursor_name) as cur:
         cur.itersize = batch_size
         cur.execute(sql)
+        # Fetch first batch before reading description — psycopg2 named cursors
+        # only populate cur.description after the first fetchmany call.
+        first_batch = cur.fetchmany(batch_size)
         cols = [d[0] for d in cur.description]
         with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(cols)
+            if first_batch:
+                w.writerows(first_batch)
+                total += len(first_batch)
             while True:
                 rows = cur.fetchmany(batch_size)
                 if not rows:
@@ -128,15 +136,18 @@ def build_id_list(ids) -> str:
     return ", ".join(str(int(i)) for i in ids)
 
 
-def select_patients(conn, n_icu: int, n_sepsis: int, n_ed: int) -> list:
+def select_patients(conn, n_icu: int, n_sepsis: int, n_ed: int,
+                    n_inpatient: int = 150) -> list:
     """
-    Returns a list of person_ids covering all five clinical processes.
+    Returns a list of person_ids covering all six clinical processes.
     Strategy:
-      1. ICU patients   → T1 (+ T2, T4 coverage by default)
-      2. Sepsis patients → T3  (many overlap with ICU)
-      3. ED patients    → T5  (prioritise those NOT already in set)
+      1. ICU patients        → T1 (+ T2, T4 coverage by default)
+      2. Sepsis patients     → T3 (many overlap with ICU)
+      3. ED patients         → T5 (prioritise those NOT already in set)
+      4. Inpatient-only      → T6 (pure inpatient visits, not already covered)
     """
-    print(f"\nSelecting patients (ICU≤{n_icu}, sepsis≤{n_sepsis}, ED≤{n_ed}) …")
+    print(f"\nSelecting patients (ICU≤{n_icu}, sepsis≤{n_sepsis}, "
+          f"ED≤{n_ed}, inpatient≤{n_inpatient}) …")
     person_ids = set()
 
     # 1. ICU patients (visit_detail concept 32037 = Intensive Care)
@@ -150,7 +161,7 @@ def select_patients(conn, n_icu: int, n_sepsis: int, n_ed: int) -> list:
     """)
     icu_ids = {r[0] for r in rows}
     person_ids |= icu_ids
-    print(f"  ICU patients:     {len(icu_ids):,}  ({time.time()-t0:.1f}s)")
+    print(f"  ICU patients:       {len(icu_ids):,}  ({time.time()-t0:.1f}s)")
 
     # 2. Sepsis patients
     sepsis_in = build_id_list(SEPSIS_CONCEPTS)
@@ -164,7 +175,7 @@ def select_patients(conn, n_icu: int, n_sepsis: int, n_ed: int) -> list:
     """)
     sepsis_ids = {r[0] for r in rows}
     person_ids |= sepsis_ids
-    print(f"  Sepsis patients:  {len(sepsis_ids):,}  ({time.time()-t0:.1f}s)")
+    print(f"  Sepsis patients:    {len(sepsis_ids):,}  ({time.time()-t0:.1f}s)")
 
     # 3. ED patients not already included — guarantees T5 coverage
     n_ed_needed = max(n_ed, 250)
@@ -183,7 +194,26 @@ def select_patients(conn, n_icu: int, n_sepsis: int, n_ed: int) -> list:
     if len(ed_sample) < n_ed_needed:
         ed_sample += list(ed_ids & person_ids)[:n_ed_needed - len(ed_sample)]
     person_ids |= set(ed_sample)
-    print(f"  ED patients:      {len(ed_sample):,}  ({time.time()-t0:.1f}s)")
+    print(f"  ED patients:        {len(ed_sample):,}  ({time.time()-t0:.1f}s)")
+
+    # 4. Inpatient-only patients — guarantees T6 (Inpatient Diagnosis Pathway) coverage
+    #    Select patients with inpatient visits (9201) not already in the sample.
+    t0 = time.time()
+    _, rows = fetch_all(conn, f"""
+        SELECT DISTINCT person_id
+        FROM visit_occurrence
+        WHERE visit_concept_id = 9201
+        ORDER BY person_id
+        LIMIT {n_inpatient * 4}
+    """)
+    inpatient_ids = {r[0] for r in rows}
+    new_inpatient = inpatient_ids - person_ids
+    inpatient_sample = list(new_inpatient)[:n_inpatient]
+    if len(inpatient_sample) < n_inpatient:
+        inpatient_sample += list(inpatient_ids & person_ids)[
+            :n_inpatient - len(inpatient_sample)]
+    person_ids |= set(inpatient_sample)
+    print(f"  Inpatient patients: {len(inpatient_sample):,}  ({time.time()-t0:.1f}s)")
 
     result = sorted(person_ids)
     print(f"  → Total unique patients: {len(result):,}")
@@ -262,12 +292,14 @@ def main():
     )
     parser.add_argument("--pg-conn", required=True,
                         help="PostgreSQL connection string")
-    parser.add_argument("--n-icu",    type=int, default=400,
+    parser.add_argument("--n-icu",       type=int, default=400,
                         help="Max ICU patients to include (default 400)")
-    parser.add_argument("--n-sepsis", type=int, default=350,
+    parser.add_argument("--n-sepsis",    type=int, default=350,
                         help="Max sepsis patients to include (default 350)")
-    parser.add_argument("--n-ed",     type=int, default=250,
+    parser.add_argument("--n-ed",        type=int, default=250,
                         help="Min ED patients to include (default 250)")
+    parser.add_argument("--n-inpatient", type=int, default=150,
+                        help="Inpatient-only patients for T6 coverage (default 150)")
     parser.add_argument("--out-dir",  type=str, default=str(SAMPLE_DIR),
                         help=f"Output directory for CSVs (default: {SAMPLE_DIR})")
     args = parser.parse_args()
@@ -283,7 +315,8 @@ def main():
     conn = connect(args.pg_conn)
 
     # ── 1. Select patients ────────────────────────────────────────────────
-    person_ids = select_patients(conn, args.n_icu, args.n_sepsis, args.n_ed)
+    person_ids = select_patients(conn, args.n_icu, args.n_sepsis, args.n_ed,
+                                 args.n_inpatient)
     id_list    = build_id_list(person_ids)
 
     # ── 2. Export person-filtered OMOP tables ─────────────────────────────
