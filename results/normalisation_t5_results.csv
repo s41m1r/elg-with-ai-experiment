@@ -1,0 +1,37 @@
+llm,strategy,repetition,executable,llm_activities_exact,n_llm_activities,m3b_exact,m4a_exact,llm_categories_normalised,n_llm_categories,m3b_normalised,m4a_normalised
+claude,few_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,few_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,few_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,naive,1,True,ED_Disposition,1,0.0,0.0,,0,0.0,0.0
+claude,naive,2,True,Transfer,1,0.0,0.0,,0,0.0,0.0
+claude,naive,3,True,ED_Disposition,1,0.0,0.0,,0,0.0,0.0
+claude,schema_aware,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,schema_aware,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,schema_aware,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,zero_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,zero_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+claude,zero_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,few_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,few_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,few_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,naive,1,True,,0,0.0,0.0,,0,0.0,0.0
+gpt4o,naive,2,True,,0,0.0,0.0,,0,0.0,0.0
+gpt4o,naive,3,True,,0,0.0,0.0,,0,0.0,0.0
+gpt4o,schema_aware,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,schema_aware,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,schema_aware,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,zero_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,zero_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+gpt4o,zero_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,few_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,few_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,few_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,naive,1,True,,0,0.0,0.0,,0,0.0,0.0
+llama3,naive,2,True,,0,0.0,0.0,,0,0.0,0.0
+llama3,naive,3,True,,0,0.0,0.0,,0,0.0,0.0
+llama3,schema_aware,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,schema_aware,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,schema_aware,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,zero_shot,1,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,zero_shot,2,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8
+llama3,zero_shot,3,True,ED Arrival; ED Diagnosis Recorded; ED Discharge; ED Procedure,4,0.00053,0.000529,ED Arrival; ED Departure; ED Diagnosis; ED Procedure,4,0.8,0.8

@@ -1,0 +1,66 @@
+========================================================================
+NORMALISATION EXPERIMENT — T5 (Emergency Department Flow)
+========================================================================
+
+OBJECTIVE
+------------------------------------------------------------------------
+Demonstrate that near-zero M3b/M4a under exact string matching is an
+artefact of activity label granularity, not structural SQL errors.
+
+METHOD
+------------------------------------------------------------------------
+Ground-truth SQL JOINs the OMOP concept table, producing fine-grained
+labels (e.g., 'ED Diagnosis: Chest pain'). LLM-generated SQL uses
+category-level string literals (e.g., 'ED Diagnosis Recorded').
+We apply a 5-rule category mapping to both label sets and recompute
+M3b (activity coverage) and M4a (activity Jaccard).
+
+CATEGORY MAPPING
+------------------------------------------------------------------------
+GT label pattern            → Category
+'ED Arrival'                → ED Arrival
+'ED Departure'              → ED Departure
+'ED Sub-Stay: <concept>'    → ED Sub-Stay
+'ED Diagnosis: <concept>'   → ED Diagnosis
+'ED Procedure: <concept>'   → ED Procedure
+
+LLM label                   → Category
+'ED Arrival'                → ED Arrival
+'ED Discharge'              → ED Departure  (synonym)
+'ED Diagnosis Recorded'     → ED Diagnosis   (category)
+'ED Procedure'              → ED Procedure   (exact)
+'ED_Disposition', etc.      → None (no GT match)
+
+GROUND TRUTH
+------------------------------------------------------------------------
+  Total rows:               79,920
+  Distinct cases:           554
+  Distinct activities:      1888 (exact labels)
+  Distinct categories:      5 → ['ED Arrival', 'ED Departure', 'ED Diagnosis', 'ED Procedure', 'ED Sub-Stay']
+
+RESULTS
+------------------------------------------------------------------------
+  Total LLM SQL files:      36
+  Executable:               36
+  Non-naive executable:     27
+  Naive executable:         9
+
+  Non-naive queries (zero-shot, schema-aware, few-shot):
+    Mean M3b (exact):       0.0005  (0.05%)
+    Mean M4a (exact):       0.0005  (0.05%)
+    Mean M3b (normalised):  0.8000  (80.00%)
+    Mean M4a (normalised):  0.8000  (80.00%)
+    Improvement factor:     1509×
+
+INTERPRETATION
+------------------------------------------------------------------------
+The 20% gap (M3b/M4a = 0.80, not 1.00) is due to one missing GT
+category: 'ED Sub-Stay' (from visit_detail). No LLM query attempts
+to extract visit_detail sub-stays. The remaining 4/5 categories
+(ED Arrival, ED Departure, ED Diagnosis, ED Procedure) are correctly
+captured by all non-naive LLM queries.
+
+This confirms that the near-zero exact-match M3b/M4a is a label
+granularity issue, not a structural SQL error. A vocabulary-aware
+prompting strategy that instructs the LLM to JOIN the concept table
+would likely resolve this gap automatically.
