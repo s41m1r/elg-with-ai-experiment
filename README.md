@@ -34,4 +34,6 @@ python scripts/evaluate_metrics.py
 - `experiment/results/summary.csv`
 
 ## Initial XES and Process Mining results
-we provide the a Jupyter notebook `experiment/mine_process_models.ipynb` that shows a demonstration of the utility of our approach to analyze the various treatment processes with process mining. Results and figures are already included in the notebook.
+We provide the a [Jupyter notebook](mine_process_models.ipynb) that shows a demonstration of the utility of our approach to analyze the various treatment processes with process mining. Results and figures are already included in the notebook.
+
+
