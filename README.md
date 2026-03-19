@@ -1,6 +1,6 @@
 # ELG with AI Experiment
 
-This repository contains only the experiment artifacts and pipeline for LLM-driven SQL event log extraction from OMOP CDM (MIMIC-IV).
+This repository contains only the experiment artifacts and pipeline for LLM-driven SQL event log extraction from OMOP CDM.
 
 ## Experiment contents
 - `experiment/ground_truth/`
@@ -11,8 +11,8 @@ This repository contains only the experiment artifacts and pipeline for LLM-driv
 - `experiment/scripts/`
 
 ## Excluded from GitHub
-- `experiment/sample_data/` (local sample data, ignored)
-- API keys and `.env` secrets
+- `experiment/sample_data/` (local sample data: MIMIC IV in the OMOP CDM format)
+- API keys and `.env` secrets (e.g., API keys)
 
 ## Run instructions
 ```bash
@@ -32,3 +32,6 @@ python scripts/evaluate_metrics.py
 - `experiment/results/fidelity.csv`
 - `experiment/results/sensitivity.csv`
 - `experiment/results/summary.csv`
+
+## Initial XES and Process Mining results
+we provide the a Jupyter notebook `experiment/mine_process_models.ipynb` that shows a demonstration of the utility of our approach to analyze the various treatment processes with process mining. Results and figures are already included in the notebook.
