@@ -1,4 +1,4 @@
-# Replication Package — AI-Assisted Event Log Extraction for Process Mining in Healthcare
+# Replication Package for AI-Assisted Event Log Extraction for Process Mining in Healthcare
 
 > **Paper:** *AAI-Assisted Event Log Extraction for Process Mining in Healthcare*
 > **Venue:** BPM 2026 Engineering Track
