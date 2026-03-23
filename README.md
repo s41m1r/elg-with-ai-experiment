@@ -1,15 +1,15 @@
 # Replication Package for AI-Assisted Event Log Extraction for Process Mining in Healthcare
 
-> **Paper:** *AAI-Assisted Event Log Extraction for Process Mining in Healthcare*
+> **Paper:** *AI-Assisted Event Log Extraction for Process Mining in Healthcare*
 > **Venue:** BPM 2026 Engineering Track
 
 ---
 
 ## Overview
 
-This repository contains the complete replication package for our empirical study evaluating large language models (LLMs) on the task of generating SQL queries that extract event logs from healthcare databases structured according to the **OMOP Common Data Model (CDM)**. The target dataset is **MIMIC-IV**, a large publicly available ICU database from Beth Israel Deaconess Medical Center.
+This repository contains the complete replication package for our framework that uses large language models (LLMs) on the task of generating SQL queries that extract event logs from healthcare databases structured according to the **OMOP Common Data Model (CDM)**. The target dataset is **MIMIC-IV**, a large publicly available ICU database from Beth Israel Deaconess Medical Center.
 
-The experiment covers **6 clinical process tasks**, **3 LLMs** (GPT-4o, Claude Sonnet, Llama 3 70B), **4 prompting strategies** (Naive, Zero-Shot, Schema-Aware, Few-Shot), and **3 repetitions per configuration** — totalling **216 LLM API calls** and **135 generated SQL queries** (some tasks overlap). All generated SQL is evaluated against expert-written ground-truth queries on a stratified sample of 888 MIMIC-IV patients.
+The experiment covers **6 clinical process tasks**, **3 LLMs** (GPT-4o, Claude Sonnet 4, Llama 3.3 70B), **4 prompting strategies** (Naive, Zero-Shot, Schema-Aware, Few-Shot), and **3 repetitions per configuration** — totalling **216 generated SQL queries** (6 tasks × 3 LLMs × 4 strategies × 3 repetitions). All generated SQL is evaluated against expert-written ground-truth queries on a stratified sample of **1,038 MIMIC-IV patients**.
 
 ---
 
@@ -26,7 +26,7 @@ The pre-computed results in `results/` directly correspond to the following pape
 | Table: Per-Task Best Performance | `results/latex_tables.tex` (Tab Per-Task) |
 | Key findings text (Section 5) | `results/key_findings.txt` |
 | Error breakdown (Section 5.1) | `results/error_analysis.md` |
-| Process mining figures (Section 6) | `figures/` + `mine_process_models.ipynb` |
+| Process mining figures (replication package) | `figures/` + `mine_process_models.ipynb` |
 
 ---
 
@@ -58,11 +58,11 @@ elg-with-ai-experiment/
 │   │   ├── schema_aware.txt   # Task description + full OMOP CDM DDL
 │   │   └── few_shot.txt       # Task description + worked example
 │
-├── outputs/                   # LLM-generated SQL files (135 total)
+├── outputs/                   # LLM-generated SQL files (216 total)
 │   ├── t1/ … t6/
-│   │   ├── claude/            # Claude Sonnet outputs
+│   │   ├── claude/            # Claude Sonnet 4 outputs
 │   │   ├── gpt4o/             # GPT-4o outputs
-│   │   └── llama3/            # Llama 3 70B outputs
+│   │   └── llama3/            # Llama 3.3 70B outputs
 │   │       ├── <strategy>_r<N>.sql      # Extracted SQL
 │   │       └── <strategy>_r<N>_raw.txt  # Raw LLM response
 │
@@ -192,7 +192,7 @@ Output: `prompts/t1/` … `prompts/t6/`, each containing `naive.txt`, `zero_shot
 
 ### Step 2 — Run LLMs
 
-Calls the three LLM APIs and saves generated SQL. This step makes ~216 API calls and may take 30–60 minutes depending on rate limits.
+Calls the three LLM APIs (GPT-4o, Claude Sonnet 4, Llama 3.3 70B) and saves generated SQL. This step makes 216 API calls and may take 30–60 minutes depending on rate limits.
 
 ```bash
 python scripts/run_llms.py
@@ -263,8 +263,8 @@ All tasks target the **OMOP Common Data Model**. The framework is designed to be
 | T2 | Medication Administration | `drug_exposure`, `drug_era`, `concept` |
 | T3 | Sepsis Treatment Trajectory | `condition_occurrence`, `measurement`, `drug_exposure`, `observation` |
 | T4 | Lab-Order-to-Result Cycle | `measurement`, `specimen` |
-| T5 | Emergency Department Flow | `visit_occurrence`, `visit_detail`, `condition_occurrence` |
-| T6 | Inpatient Diagnosis Pathway | `visit_occurrence`, `condition_occurrence` |
+| T5 | Emergency Department Flow | `visit_occurrence`, `visit_detail`, `condition_occurrence`, `procedure_occurrence` |
+| T6 | Inpatient Diagnosis Pathway | `visit_occurrence`, `condition_occurrence`, `concept` |
 
 ---
 
@@ -276,7 +276,7 @@ A Jupyter notebook is provided with pre-computed process mining results on the g
 jupyter notebook mine_process_models.ipynb
 ```
 
-The notebook demonstrates how the extracted event logs can be used for process discovery (Directly-Follows Graphs, Petri nets) and process analysis across all five clinical tasks. **All figures are pre-rendered** — no database connection is required to view the notebook.
+The notebook demonstrates how the extracted event logs can be used for process discovery (Directly-Follows Graphs, Petri nets) and process analysis across all six clinical tasks. **All figures are pre-rendered** — no database connection is required to view the notebook.
 
 ---
 
@@ -284,9 +284,9 @@ The notebook demonstrates how the extracted event logs can be used for process d
 
 | LLM | Provider | Model ID | API |
 |---|---|---|---|
-| GPT-4o | OpenAI | `gpt-4o-2024-08-06` | OpenAI API |
-| Claude Sonnet | Anthropic | `claude-sonnet-4-5` | Anthropic API |
-| Llama 3 70B | Meta (via Groq) | `llama3-70b-8192` | Groq API |
+| GPT-4o | OpenAI | `gpt-4o` | OpenAI API |
+| Claude Sonnet 4 | Anthropic | `claude-sonnet-4` | Anthropic API |
+| Llama 3.3 70B | Meta (via Groq) | `llama-3.3-70b-versatile` | Groq API |
 
 ---
 
@@ -294,10 +294,10 @@ The notebook demonstrates how the extracted event logs can be used for process d
 
 > Full results are in `results/key_findings.txt` and `results/latex_tables.tex`.
 
-- **M1 Executability:** Claude Sonnet achieved 100% executability; GPT-4o 91%; Llama 3 71% overall.
-- **M3a Case Coverage:** Mean 78.7% — LLMs identify the correct patient cohorts effectively.
-- **M3b Activity Coverage / M4a Jaccard:** Near-zero (~0.17%) — LLMs and ground truth use different concept naming conventions, causing a terminology mismatch rather than a structural failure.
-- **M5 Prompt Sensitivity:** Claude Sonnet is the most stable across prompt strategies (σ=0.012); GPT-4o is the most sensitive (σ=0.116).
+- **M1 Executability (overall 83%):** Claude Sonnet 4 achieved 96%; GPT-4o 92%; Llama 3.3 70B 61%. Few-shot is the most reliable strategy (93%); naive is the weakest (63%).
+- **M3a Case Coverage:** Mean 66.4% overall; rises to 87.5% excluding the naive strategy — LLMs reliably identify correct patient cohorts when given clinical context.
+- **M3b Activity Coverage / M4a Jaccard:** M3b mean 7.1%; M4 overall mean 0.057 — near-zero for T1–T5 because LLMs use string literals (e.g., `'Hospital Admission'`) while ground truth uses OMOP `concept_name` lookups (e.g., `'Inpatient Visit'`). This is a labelling mismatch, not a structural failure; T6 achieves M3b=1.0 where concept joins are explicit.
+- **M5 Prompt Sensitivity:** Llama 3.3 is the most sensitive (M̄5=0.218); Claude Sonnet 4 is the most consistent (M̄5=0.188). Schema complexity (not model choice) is the primary driver of task difficulty.
 
 ---
 
@@ -305,7 +305,7 @@ The notebook demonstrates how the extracted event logs can be used for process d
 
 The following items are excluded from this repository due to data access restrictions or size:
 
-- `sample_data/` — stratified OMOP CDM CSV export (888 patients); available to researchers with PhysioNet credentials
+- `sample_data/` — stratified OMOP CDM CSV export (1,038 patients); available to researchers with PhysioNet credentials
 - `.env` — API keys and database credentials (see `.env.example`)
 
 ---
@@ -315,9 +315,8 @@ The following items are excluded from this repository due to data access restric
 If you use this replication package, please cite:
 
 ```bibtex
-@inproceedings{anonymous2026llmelg,
-  title     = {LLM-Driven SQL Generation for Healthcare Event Log Extraction:
-               Evaluating Large Language Models on MIMIC-IV for Process Mining},
+@inproceedings{anonymous2026aiassisted,
+  title     = {AI-Assisted Event Log Extraction for Process Mining in Healthcare},
   author    = {Anonymous Authors},
   booktitle = {Proceedings of the International Conference on Business Process Management
                (BPM 2026) -- Engineering Track},
