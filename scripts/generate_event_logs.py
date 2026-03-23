@@ -184,7 +184,7 @@ ORDER BY case_id, timestamp
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
-# T3 — Sepsis concept list (129 SNOMED codes, expanded by Zeinab via
+# T3 — Sepsis concept list (129 SNOMED codes, expanded by a domain expert via
 #       concept_ancestor traversal from core sepsis codes)
 # ─────────────────────────────────────────────────────────────────────────────
 

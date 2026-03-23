@@ -32,7 +32,7 @@ Outputs:
     results/normalisation_t5_results.csv  — per-query exact vs normalised M3b/M4a
     results/normalisation_t5_summary.txt  — human-readable summary
 
-Author: Saimir Bala (automated experiment)
+Author: Anonymous (automated experiment)
 Date: 2026-03-18
 """
 

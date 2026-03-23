@@ -12,7 +12,7 @@
 -- Tables: condition_occurrence, measurement, drug_exposure, observation, concept
 -- Complexity: Very High
 --
--- Sepsis concept list: expanded by Zeinab Soleimani via OMOP concept_ancestor
+-- Sepsis concept list: expanded by a domain expert via OMOP concept_ancestor
 --   traversal from core sepsis SNOMED codes. Full list of 129 concepts used here.
 --
 -- Note: CDMPHI uses XTN_IS_ABNORMAL_RESULT and XTN_ORDER_DATETIME flags.

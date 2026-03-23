@@ -99,7 +99,7 @@ CREATE TABLE concept (
 Example SQL:
 -- [Ground-truth SQL for this example task will be inserted here]
 -- Placeholder: this few-shot example will be completed once
--- Zeinab's ground-truth SQL for this task is available.
+-- Ground-truth SQL for this task is available.
 
 Example output (first 3 rows):
 case_id | activity              | timestamp

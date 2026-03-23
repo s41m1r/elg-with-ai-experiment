@@ -1,0 +1,17 @@
+# Core data & analytics
+pandas>=2.0
+duckdb>=0.10
+
+# LLM API clients
+openai>=1.30          # Used for GPT-4o (OpenAI) and Llama 3 (Groq, OpenAI-compatible endpoint)
+anthropic>=0.25       # Used for Claude Sonnet
+
+# PostgreSQL adapter (optional — only needed for full MIMIC-IV reproduction)
+psycopg2-binary>=2.9  # Or install psycopg2 if building from source
+
+# Process mining (used in evaluate_metrics.py and generate_event_logs.py)
+pm4py>=2.7
+
+# Jupyter (optional — only needed to re-run mine_process_models.ipynb)
+jupyter>=1.0
+ipykernel>=6.0
