@@ -3,8 +3,8 @@
 generate_event_logs.py  —  ELG × AI × Healthcare | BPM 2026
 ============================================================
 
-Generates XES-format event logs for the five clinical process tasks (T1–T5)
-from the MIMIC-IV OMOP CDM 888-patient sample data stored as local CSV files.
+Generates XES-format event logs for the six clinical process tasks (T1–T6)
+from the MIMIC-IV OMOP CDM 1,038-patient sample data stored as local CSV files.
 
 The SQL logic is a faithful port of the ground-truth queries in
     experiment/ground_truth/t{N}_gt.sql
@@ -25,6 +25,7 @@ Output
         t3_sepsis_trajectory.xes   (sampled to MAX_CASES_T3 by default)
         t4_lab_cycle.xes           (sampled to MAX_CASES_T4 by default)
         t5_ed_flow.xes
+        t6_diagnosis_pathway.xes
 
 Notes
 -----
@@ -405,15 +406,57 @@ ORDER BY case_id, timestamp
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
+# T6 — Inpatient Diagnosis Pathway
+# Tracks inpatient hospital visits: admission → condition diagnoses → discharge.
+# Low complexity: three tables with direct FK paths and a single concept join.
+# T6 is the reference task where LLMs achieve M3b = 1.0 because the concept
+# join is explicit in the schema, enabling exact activity label matching.
+# ─────────────────────────────────────────────────────────────────────────────
+T6_SQL = """
+SELECT vo.visit_occurrence_id  AS case_id,
+       'Hospital Admission'    AS activity,
+       vo.visit_start_datetime AS timestamp
+FROM   visit_occurrence vo
+WHERE  vo.visit_concept_id IN (9201, 262)   -- Inpatient Visit / ER+Inpatient
+  AND  vo.visit_start_datetime IS NOT NULL
+
+UNION ALL
+
+SELECT co.visit_occurrence_id                          AS case_id,
+       'Condition Diagnosed: ' || c.concept_name       AS activity,
+       co.condition_start_datetime                      AS timestamp
+FROM   condition_occurrence co
+JOIN   concept c ON co.condition_concept_id = c.concept_id
+WHERE  co.condition_start_datetime IS NOT NULL
+  AND  co.visit_occurrence_id IN (
+           SELECT vo2.visit_occurrence_id
+           FROM   visit_occurrence vo2
+           WHERE  vo2.visit_concept_id IN (9201, 262)
+       )
+
+UNION ALL
+
+SELECT vo.visit_occurrence_id  AS case_id,
+       'Hospital Discharge'    AS activity,
+       vo.visit_end_datetime   AS timestamp
+FROM   visit_occurrence vo
+WHERE  vo.visit_concept_id IN (9201, 262)
+  AND  vo.visit_end_datetime IS NOT NULL
+
+ORDER BY case_id, timestamp
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Task registry — default max_cases for large tasks keeps XES manageable
 # Set max_cases=None to export the full sample
 # ─────────────────────────────────────────────────────────────────────────────
 TASKS: dict[str, dict] = {
-    "t1": dict(name="icu_pathway",        sql=T1_SQL, max_cases=None),
-    "t2": dict(name="medication_admin",   sql=T2_SQL, max_cases=None),
-    "t3": dict(name="sepsis_trajectory",  sql=T3_SQL, max_cases=500),
-    "t4": dict(name="lab_cycle",          sql=T4_SQL, max_cases=500),
-    "t5": dict(name="ed_flow",            sql=T5_SQL, max_cases=None),
+    "t1": dict(name="icu_pathway",          sql=T1_SQL, max_cases=None),
+    "t2": dict(name="medication_admin",     sql=T2_SQL, max_cases=None),
+    "t3": dict(name="sepsis_trajectory",    sql=T3_SQL, max_cases=500),
+    "t4": dict(name="lab_cycle",            sql=T4_SQL, max_cases=500),
+    "t5": dict(name="ed_flow",              sql=T5_SQL, max_cases=None),
+    "t6": dict(name="diagnosis_pathway",    sql=T6_SQL, max_cases=None),
 }
 
 
@@ -658,7 +701,7 @@ def main() -> None:
         choices=list(TASKS.keys()),
         default=list(TASKS.keys()),
         metavar="TASK",
-        help="Tasks to generate (t1 t2 t3 t4 t5; default: all)",
+        help="Tasks to generate (t1 t2 t3 t4 t5 t6; default: all)",
     )
     parser.add_argument(
         "--max-cases",

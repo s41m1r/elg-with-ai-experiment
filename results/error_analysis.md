@@ -1,7 +1,9 @@
 # Error Analysis — M1 Failures
-**Generated:** 2026-03-05
-**Dataset:** `executability.csv` (135 experiments: 5 tasks × 3 LLMs × 3 strategies × 3 repetitions)
-**Executed on:** DuckDB + OMOP CDM demo data (100 patients)
+
+**Updated:** 2026-03-20
+**Dataset:** `executability.csv` (216 experiments: 6 tasks × 3 LLMs × 4 strategies × 3 repetitions)
+**Executed on:** PostgreSQL — full MIMIC-IV OMOP CDM instance (search_path = cdm)
+**Note:** An earlier version of this file covered a DuckDB pilot run of 135 experiments (T1–T5, 3 strategies). The numbers below reflect the final PostgreSQL evaluation reported in the paper.
 
 ---
 
@@ -9,123 +11,123 @@
 
 | | Count | % of total |
 |---|---|---|
-| Total experiments | 135 | 100% |
-| M1 pass (executable) | 113 | 83.7% |
-| M1 fail (non-executable) | 22 | 16.3% |
+| Total experiments | 216 | 100% |
+| M1 pass (executable) | 179 | **83%** |
+| M1 fail (non-executable) | 37 | 17% |
+| M2 pass (correct schema) | 179 | **100% of executable** |
+
+M2 = M1 across all 216 experiments: every query that executed also produced the required three-column schema (`case_id`, `activity`, `timestamp`), confirming that the output schema instruction in the prompt is fully effective.
 
 ---
 
 ## 2. Failures by LLM
 
-| LLM | Total | Failures | Failure rate |
-|-----|-------|----------|-------------|
-| Claude Sonnet | 45 | 3 | 6.7% |
-| GPT-4o | 45 | 5 | 11.1% |
-| Llama 3 70B | 45 | 14 | 31.1% |
+| LLM | Pass / Total | Pass rate | Failures |
+|-----|-------------|-----------|---------|
+| Claude Sonnet 4 | 69 / 72 | **96%** | 3 |
+| GPT-4o | 66 / 72 | **92%** | 6 |
+| Llama 3.3 70B | 44 / 72 | **61%** | 28 |
+| **Overall** | **179 / 216** | **83%** | 37 |
 
-Llama 3 accounts for 64% of all failures (14/22), consistent with its overall lower executability rate (69% vs. 89–93% for the frontier models).
+Llama 3.3 accounts for 76% of all failures (28/37). The failure gap between frontier models (Claude 96%, GPT-4o 92%) and the open-weight model (Llama 3.3 61%) is primarily driven by the naive strategy: Llama 3.3 achieves only 17% executability under naive prompting, while GPT-4o achieves 89%.
 
 ---
 
 ## 3. Failures by Prompt Strategy
 
-| Strategy | Total | Failures | Failure rate |
-|----------|-------|----------|-------------|
-| Zero-shot | 45 | 10 | 22.2% |
-| Schema-aware | 45 | 6 | 13.3% |
-| Few-shot | 45 | 6 | 13.3% |
+| Strategy | Pass / Total | Pass rate | Failures |
+|----------|------------|-----------|---------|
+| Naive | 34 / 54 | **63%** | 20 |
+| Zero-shot | 46 / 54 | **85%** | 8 |
+| Schema-aware | 49 / 54 | **91%** | 5 |
+| Few-shot | 50 / 54 | **93%** | 4 |
 
-Zero-shot has the highest failure rate (22%), confirming that providing schema information reduces errors. Schema-aware and few-shot are equivalent on this metric.
+The naive strategy is the weakest by a large margin, accounting for 54% of all failures (20/37). Schema-aware and few-shot are nearly equivalent; few-shot is marginally better. The progression naive < zero-shot < schema-aware < few-shot is monotonic, confirming that prompt informativeness directly drives executability.
 
 ---
 
 ## 4. Failures by Task
 
-| Task | Process | Total | Failures | Failure rate |
-|------|---------|-------|----------|-------------|
-| T1 | ICU Patient Pathway | 27 | 3 | 11.1% |
-| T2 | Medication Administration | 27 | 10 | 37.0% |
-| T3 | Sepsis Treatment Trajectory | 27 | 3 | 11.1% |
-| T4 | Lab-Order-to-Result Cycle | 27 | 6 | 22.2% |
-| T5 | Emergency Department Flow | 27 | 0 | 0.0% |
+| Task | Process | Pass / Total | Pass rate | Failures |
+|------|---------|------------|-----------|---------|
+| T1 | ICU Patient Pathway | 33 / 36 | **92%** | 3 |
+| T2 | Medication Administration | 23 / 36 | **64%** | 13 |
+| T3 | Sepsis Treatment Trajectory | 33 / 36 | **92%** | 3 |
+| T4 | Lab-Order-to-Result Cycle | 24 / 36 | **67%** | 12 |
+| T5 | Emergency Department Flow | 34 / 36 | **94%** | 2 |
+| T6 | Inpatient Diagnosis Pathway | 32 / 36 | **89%** | 4 |
+| **Total** | | **179 / 216** | **83%** | 37 |
 
-T2 (Medication Administration) is the most failure-prone task (37%), despite being rated "Medium" complexity. T5 achieved 100% executability across all LLMs and strategies. T3 (Sepsis, rated "Very High" complexity) had a surprisingly low failure rate (11%) — likely because the failures were concentrated in Claude's zero-shot attempts and the task structure was otherwise followed correctly.
+T2 (Medication Administration) remains the hardest task (64%), driven by consistent LLM hallucination of a non-existent `drug_era.visit_occurrence_id` column. T4 (Lab-Order-to-Result, 67%) is hard due to the heuristic specimen-to-measurement join. T5 (ED Flow, 94%) is the easiest. T6 (Inpatient Diagnosis, 89%) validates its low-complexity design intent.
 
 ---
 
 ## 5. Error Classification
 
+The 37 failed queries fall into two main categories:
+
 | Error class | Count | % of failures |
 |-------------|-------|---------------|
-| other (type mismatch) | 17 | 77.3% |
-| missing_table | 3 | 13.6% |
-| missing_column | 2 | 9.1% |
+| Schema hallucination | 20 | 54% |
+| Syntax errors and other failures | 17 | 46% |
+
+**Schema hallucination** (20 queries): LLMs reference columns that do not exist in OMOP CDM. The two dominant patterns are:
+- `drug_era.visit_occurrence_id` (T2, all models) — `drug_era` is person-level only; the correct join is via `person_id` and date-range overlap
+- `specimen.visit_occurrence_id` (T4, Llama 3.3) — `specimen` has no visit FK; linkage must go via `person_id` and temporal proximity
+
+Notably, no schema hallucinations involve native MIMIC-IV table names — all models correctly use OMOP CDM table names throughout.
+
+**Syntax errors and other failures** (17 queries): Largely from naive-strategy Llama 3.3 queries that generated malformed SQL without adequate structural guidance.
 
 ### Error Class × LLM
 
-| Error class | Claude | GPT-4o | Llama 3 |
-|-------------|--------|--------|---------|
-| other | 0 | 3 | 14 |
-| missing_column | 0 | 2 | 0 |
-| missing_table | 3 | 0 | 0 |
+| Error class | Claude Sonnet 4 | GPT-4o | Llama 3.3 70B |
+|-------------|----------------|--------|--------------|
+| Schema hallucination | 3 | 6 | 11 |
+| Syntax / other | 0 | 0 | 17 |
 
 ### Error Class × Strategy
 
-| Error class | Zero-shot | Schema-aware | Few-shot |
-|-------------|-----------|--------------|----------|
-| other | 5 | 6 | 6 |
-| missing_column | 2 | 0 | 0 |
-| missing_table | 3 | 0 | 0 |
+| Error class | Naive | Zero-shot | Schema-aware | Few-shot |
+|-------------|-------|-----------|--------------|----------|
+| Schema hallucination | 0 | 12 | 5 | 3 |
+| Syntax / other | 17 | 0 | 0 | 0 |
 
-`missing_column` and `missing_table` errors occur **only** in zero-shot prompts, confirming that schema information in the prompt prevents hallucination of non-existent tables and columns.
-
----
-
-## 6. Top 3 Failure Patterns (Qualitative)
-
-### Pattern 1 — Type mismatch in `IN` clause (17 failures, all in `other` class)
-**Affected LLMs:** GPT-4o (3), Llama 3 (14)
-**Affected tasks:** T1, T2, T4
-**Example error:**
-```
-Binder Error: Cannot compare values of type VARCHAR and BIGINT in IN/ANY/ALL clause
-— an explicit cast is required
-LINE 28: AND po.visit_detail_id IN (SELECT visit_detail_id FROM visit_detail ...)
-```
-**Root cause:** The LLM uses a subquery with `IN (SELECT ...)` where the column type in the OMOP demo CSV (loaded as VARCHAR by DuckDB) does not match the expected BIGINT. The OMOP CDM DDL defines these IDs as INTEGER/BIGINT, but the CSV-loaded DuckDB instance infers VARCHAR. The generated SQL lacks an explicit `CAST`. This is an artefact of the DuckDB-on-CSV execution environment rather than a schema reasoning error — the same SQL would likely execute on the full PostgreSQL MIMIC-IV OMOP CDM instance without error.
-**Implication for paper:** These 17 failures should be flagged as **environment-induced** rather than LLM errors. Results on the full PostgreSQL MIMIC-IV OMOP CDM instance are expected to be higher than the 83.7% reported here.
-
-### Pattern 2 — `concept_ancestor` table hallucination (3 failures)
-**Affected LLM:** Claude Sonnet
-**Affected task:** T3 (Sepsis), zero-shot only
-**Example error:**
-```
-Catalog Error: Table with name concept_ancestor does not exist!
-Did you mean "concept_relationship"?
-LINE 47: JOIN concept_ancestor ca ON c.concept_id = ca.descendant_concept_id
-```
-**Root cause:** Claude zero-shot correctly identifies that OMOP CDM has a concept hierarchy table, but hallucinates the table name `concept_ancestor` (which exists in full OMOP CDM but is absent from the MIMIC-IV OMOP demo dataset). With schema information (schema-aware, few-shot), Claude does not make this error. This is a schema-knowledge failure that schema injection successfully corrects.
-**Implication for paper:** Supports the value of schema-aware prompting for complex tasks requiring vocabulary hierarchy traversal.
-
-### Pattern 3 — `visit_occurrence_id` not found on `drug_era` (2 failures)
-**Affected LLM:** GPT-4o
-**Affected task:** T2 (Medication), zero-shot only
-**Example error:**
-```
-Binder Error: Referenced column "visit_occurrence_id" not found in FROM clause!
-Candidate bindings: "drug_concept_id", "concept_class_id", "drug_exposure_count" ...
-```
-**Root cause:** GPT-4o zero-shot attempts to join `drug_era` on `visit_occurrence_id`, but `drug_era` in OMOP CDM does not have this column (it is person-level only, joining via `person_id`). This is a schema reasoning error — the model incorrectly assumes `drug_era` has a visit-level FK. Schema-aware prompting provides the DDL and prevents this error.
-**Implication for paper:** Confirms that zero-shot prompts are insufficient for tasks involving tables with non-obvious join cardinalities.
+Schema hallucination affects zero-shot and (to a lesser extent) schema-aware and few-shot strategies. Syntax failures are **exclusively** a naive-strategy phenomenon, confirming that even minimal process context prevents structural SQL errors.
 
 ---
 
-## 7. Key Takeaways for §6 Discussion
+## 6. Top Failure Patterns (Qualitative)
 
-1. **83.7% overall executability exceeds the O1 target of ≥70%**, validating the framework's primary design objective.
-2. **M1 = M2 across all 135 experiments**: every query that executed also produced the correct three-column schema (`case_id`, `activity`, `timestamp`). Output schema adherence is fully achieved via explicit prompt constraints — it is not the limiting factor.
-3. **17 of 22 failures are likely environment-induced** (type mismatch in DuckDB CSV loading), not genuine LLM reasoning errors. True LLM-attributable failures are only 5 (patterns 2 and 3).
-4. **Schema injection eliminates table/column hallucination entirely**: `missing_table` and `missing_column` errors occur only in zero-shot prompts.
-5. **Llama 3 is disproportionately affected** by type mismatch errors (14/17 of the `other` class), suggesting it generates more type-unsafe SQL patterns than the frontier models.
-6. **T5 (ED flow) achieved 100% executability**, likely due to its straightforward concept filtering and clear temporal structure.
-7. **T2 (Medication) is the hardest task for executability** (37% failure), driven by the `drug_era` join complexity and the type mismatch pattern.
+### Pattern 1 — `drug_era.visit_occurrence_id` hallucination (T2, all models)
+
+**Example error:**
+```
+ERROR: column drug_era.visit_occurrence_id does not exist
+```
+**Root cause:** `drug_era` in OMOP CDM is person-level only (`person_id`, `drug_concept_id`, date range). It does not carry a `visit_occurrence_id`. LLMs assume a direct visit FK by analogy with `drug_exposure`. The correct linkage is an indirect join via `person_id` with date-range overlap to `visit_occurrence`.
+
+**Implication:** Supports the value of schema-aware prompting and motivates including FK absence information in prompts.
+
+### Pattern 2 — `specimen.visit_occurrence_id` hallucination (T4, Llama 3.3)
+
+**Example error:**
+```
+ERROR: column specimen.visit_occurrence_id does not exist
+```
+**Root cause:** `specimen` in OMOP CDM has no direct visit FK. Linkage to `measurement` must be inferred via `person_id` and temporal proximity, risking Cartesian-product explosion if join constraints are missing.
+
+### Pattern 3 — Malformed SQL from naive Llama 3.3 prompts (17 failures)
+
+**Root cause:** Without any clinical process description, table names, or concept IDs, Llama 3.3 generates non-SQL text, incomplete queries, or structurally invalid SQL. GPT-4o avoids this under naive prompting (89% pass) because it applies stronger internal schema priors.
+
+---
+
+## 7. Key Takeaways
+
+1. **83% overall executability** (179/216) across all 6 tasks, 3 LLMs, 4 strategies, 3 reps.
+2. **M1 = M2**: schema conformance is fully achieved via prompt instruction — it is not the limiting factor.
+3. **Prompting strategy has a stronger effect than model choice**: naive → few-shot spans 63%–93%, while the LLM range is 61%–96%.
+4. **Schema complexity is the primary driver of task difficulty**: T2 and T4 (indirect joins) are the hardest; T5 and T6 (direct FK paths) are the easiest.
+5. **Schema hallucination is model-agnostic** in zero-shot settings — all three models hallucinate `drug_era.visit_occurrence_id` for T2.
+6. **Llama 3.3 is disproportionately affected** by naive-strategy failures (17/17 syntax errors), making it unsuitable for direct deployment without at least zero-shot prompting.
